@@ -96,21 +96,12 @@
 
 ; OS-Specific
 (when (equal system-type 'windows-nt)
-  (setq w32-pipe-read-delay 0))
+  (setq w32-pipe-read-delay 0)
+  ;; github.com/magit/with-editor/issues/41 solution for Windows
+  (defadvice server-ensure-safe-dir
+      (around my-around-server-ensure-safe-dir activate)
+    "Ignores any errors raised from server-ensure-safe-dir"
+    (ignore-errors ad-do-it))
 (when (equal system-type 'darwin))
 (when (equal system-type 'gnu/linux))
 ;;; init.el ends here
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(column-number-mode t)
- '(current-language-environment "UTF-8")
- '(debug-on-error t)
- '(fringe-mode '(nil . 0) nil (fringe))
- '(package-selected-packages '(magit))
- '(save-place-mode t)
- '(scroll-bar-mode nil)
- '(show-paren-mode t)
- '(tool-bar-mode nil))
