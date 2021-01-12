@@ -48,8 +48,6 @@
 (global-visual-line-mode)
 (show-paren-mode)
 (transient-mark-mode)
-; TODO: only turn this on for prog-mode derived modes
-(global-linum-mode)
 
 (semantic-mode)
 
@@ -94,14 +92,18 @@
   (scroll-bar-mode -1))
 
 
+(add-hook 'prog-mode-hook 'linum-mode)
+
 ; OS-Specific
 (when (equal system-type 'windows-nt)
   (setq w32-pipe-read-delay 0)
+
   ;; github.com/magit/with-editor/issues/41 solution for Windows
   (defadvice server-ensure-safe-dir
       (around my-around-server-ensure-safe-dir activate)
     "Ignores any errors raised from server-ensure-safe-dir"
-    (ignore-errors ad-do-it))
+    (ignore-errors ad-do-it)))
+
 (when (equal system-type 'darwin))
 (when (equal system-type 'gnu/linux))
 ;;; init.el ends here
