@@ -224,3 +224,275 @@ some-function
 
 ;; 'load' function causes emacs to evaluate and thereby install each of
 ;; functions found in the argument give it (the filename).
+
+;; let expression
+
+;; (let VARLIST BODY...)
+;; var list might look like this:
+;; (thread (needles 3))
+;; this will by default assign 'nil' to symbol 'thread' because
+;; we did not give it one, and bind value 3 to symbold 'needles'
+
+;; the VARLIST is a list (varlist in the jargon), where each element
+;; of is either a symbol by itself (will be bound to 'nil') or a
+;; 2 element list, the symbol and the value to bind it to (for the
+;; duration of the 'let' expression body.
+(let (first-var-no-value-defined-so-nil
+      (second-var-with-value 3)
+      (third-var-with-value "goofy"))
+  (message "Inside the body of the let! I have access to: %d"
+	   second-var-with-value))
+
+;;second-var-with-value
+;; will throw error when eval'd because it was defined within a let,
+;; so not know outside of that context.
+
+(let ((zebra "stripes")
+      (tiger "fierce"))
+  (message "One kind of animal has %s and another is %s"
+	   zebra tiger))
+;; "One kind of animal has stripes and another is fierce"
+
+(let ((birch 3)
+      pine
+      fir
+      (oak 'some))
+  (message
+   "Here are %d vars with %s, %s, and %s values."
+   birch pine fir oak))
+;; "Here are 3 vars with nil, nil, and some values."
+
+(if (> 5 4)
+    (message "5 is greater than 4 obviously!"))
+;; "5 is greater than 4 obviously!"
+
+(defun type-of-animal (characteristic)
+  "Print message in echo area depending on CHARACTERISTIC. If the
+CHARACTERISTIC is string \"fierce\", then warn of a tiger."
+  (if (equal characteristic "fierce")
+      (message "It is a tiger!")))
+(type-of-animal "fierce")
+;; "It is a tiger!"
+(type-of-animal "striped")
+;; nil
+
+;; if-then-else: second expression is the 'else' one
+(if (> 4 5)
+    (message "4 falsely greater than 5!")
+  (message "4 is not greater than 5!"))
+;; "4 is not greater than 5!"
+
+;; The result of a test is considered true ('t' symbol) if value
+;; returned is anything other than 'nil' or '()' (empty list which
+;; is alias/same as 'nil' to the interpreter).
+
+(if 4
+    'true
+  'false)
+;; true
+
+(if nil
+    'true
+  'false)
+;; false
+
+;; 'save-excursion' saves origin point location before doing its
+;; body and then puts the point back. Used all the time in conjunction
+;; with let in functions. Without it the point can jump all over the
+;; place as side-effect, which is not the user experience we want.
+
+;; e.g.,
+;; (let (foo
+;;       (bar 3))
+;;     (save-excursion
+;;        BODY...))
+
+;; 3 Exercises
+
+
+;; Write a non-interactive function that doubles the value of its
+;; argument, a number.  Make that function interactive.
+(defun doubler (n)
+  "Doubles the value of N."
+  (+ n n))
+(doubler 3)
+;; 6
+(doubler "foo")
+;; number-or-maker error, as expected with '+' symbol function defition
+
+;; Write a function that tests whether the current value of
+;; ‘fill-column’ is greater than the argument passed to the function,
+;; if so, prints an appropriate message.
+(defun fill-column-exercise (column)
+  "Test whether current value of fill-column is greater than COLUMN."
+  (interactive "p")
+  (> fill-column column))
+(fill-column-exercise 100)
+;; nil
+(fill-column-exercise 50)
+;; t
+
+;; 4 - A Few Buffer-Related Functions
+
+;; simplified goto beginning of buffer definition
+(defun simplified-beginning-of-buffer ()
+  "Move point to start of buffer; leave mark at previous position."
+  (interactive)
+  (push-mark)				; set mark at current point
+  (goto-char (point-min)))		; goto first possible point location
+
+;; mark-whole-buffer function definition
+;; in emacs 22 it looked like this:
+(defun mark-whole-buffer-22 ()
+  "Docs here."
+  (interactive)
+  (push-mark (point))
+  (push-mark (point-max) nil t)
+  (goto-char (point-min)))
+
+;; append-to-buffer definition
+(defun append-to-buffer (buffer start end)
+  "Append to specified buffer the text of the region.
+It is inserted into that buffer before its point.
+
+When calling from a program, give 3 args:
+BUFFER (or buffer name), START, and END.
+START and END specify the portion of the current buffer to be copied."
+  (interactive
+   (list (read-buffer "Append to buffer: " (other-buffer
+					    (current-buffer) t))
+	 (region-beginning) (region-end))) ; interactive expr end
+  ;; defun BODY
+  (let ((oldbuf (current-buffer)))
+    ;; let BODY
+    (save-excursion
+      (let* ((append-to (get-buffer-create buffer))
+	     (windows (get-buffer-window-list append-to t t))
+	     point)
+	;; let* BODY
+	(set-buffer append-to)
+	(setq point (point))
+	(barf-if-buffer-read-only)
+	(insert-buffer-substring oldbuf start end)
+	(dolist (window windows)
+	  (when (= (window-point window) point)
+	    (set-window-point window (point))))))))
+
+;; 'interactive' portion:
+;; it starts with a list with these parts:
+;; First part of the list is an expression to read the name of a buffer
+;; and return it as a string (read-buffer expr). It requires a prompt,
+;; the "Append to buffer: " we pass it, and the second arg tells
+;; read-buffer what value to provide if user does not specify anything--
+;; 'other-buffer' and 'current-buffer' here.
+
+;; (other-buffer (current-buffer) t) explained:
+;;
+;; Here the 'other-buffer' first arg is the exception, we give it
+;; the function 'current-buffer'. The second arg is 't' symbol for
+;; 'true' value; this is a flag that tells 'other-buffer' that it can
+;; show visible buffers except in thist case it will not show current buffer
+;; which makes sense.
+
+;; (list (..) (2nd) (3rd)) explained: 2nd and 3rd arguments to 'list':
+;; 2nd arg: 'region-beginning' expression
+;; 3rd arg: 'region-end' expression
+;; They specify start and end of text to be appended, as numbers.
+
+;; First (let ..) explanation: BODY part of the 'defun' expression:
+;; the varlist of the let is:
+;; (oldbuf (current-buffer) which binds oldbuf symbol to the value
+;; returned by evaluating current-buffer function definition.
+
+;; The varlist of a let are surrounded by () to distinguish to interpreter
+;; where varlist ends and BODY begins. So it really looks like this:
+;; (let ((oldbuf (current-buffer))) BODY...)
+
+;; next is the save-excursion BODY of the let, which saves and restores
+;; the previous point and buffer after performs ITS own BODY.
+
+;; (save-excursion
+;;   FIRST-EXPR
+;;   SECOND-EXPR
+;;   ...
+;;   LAST-EXPR)
+
+;; 'let*' symbol => like 'let' but enables emacs to set each variable
+;; in its varlist in sequence, one after another. Using let* you can
+;; then use the value of an early set variable from the varlist while
+;; still IN THE VARLIST!
+
+;; in our case we bind the symbol 'append-to' in the first let* varlist
+;; expression, and then in the second varlist expression we use the
+;; value of 'append-to' that was just bound!
+
+;; SUMMARY of append-to-buffer:
+;; ‘append-to-buffer’ works as follows: it saves the value
+;; of the current buffer in the variable called ‘oldbuf’.  It gets the new
+;; buffer (creating one if need be) and switches Emacs’s attention to it.
+;; Using the value of ‘oldbuf’, it inserts the region of text from the old
+;; buffer into the new buffer; and then using ‘save-excursion’, it brings
+;; you back to your original buffer.
+
+
+;; 4 - Exercises
+
+;; 1.Write your own ‘simplified-end-of-buffer’ function definition; then
+;;   test it to see whether it works.
+
+
+(defun simplified-end-of-buffer ()
+  "Go to further possible location for point in current buffer."
+  (interactive)
+  (goto-char (point-max)))
+
+;; 2.Use ‘if’ and ‘get-buffer’ to write a function that prints a message
+;;   telling you whether a buffer exists.
+(defun does-buffer-exist? (buf)
+  "Print message telling you whether BUFFER exists."
+  (interactive "B")			; use B to allow non-existant bufs
+  (if (get-buffer buf)
+      (message "Buffer exists.")
+    (message "Buffer does not exist.")))
+
+;; 3.Using ‘xref-find-definitions’, find the source for the
+;;   ‘copy-to-buffer’ function.
+
+;; Answer: just press M-. on top of the 'copy-to-buffer' text above.
+;; M-, to come back.
+
+
+;; 5 - A Few More Complex Functions
+
+;; body of 'copy-to-buffer' looks like this:
+
+;; ...
+;; (interactive "BCopy to buffer: \nr")	; B to allow non-existant bufs
+;; (let ((oldbuf (current-buffer)))
+;;   (with-current-buffer (get-buffer-create buffer)
+;;     (barf-if-buffer-read-only)
+;;     (erase-buffer)
+;;     (save-excursion
+;;       (insert-buffer-substring oldbuf start end))))
+
+;; (with-current-buffer (get-buffer-create buffer) ... explained:
+;; Use the buffer with the name specifed as the one to which you are copying
+;; or if it doesn't exist, create it. Then, with-current-buffer evals
+;; its BODY with that buffer temporarily current (context).
+
+;; with-current-buffer is a newer and easier mechanism that doing the
+;; save-excursion/set-buffer combo.
+
+;; (barf-if-buffer-read-only) and
+;; (erase-buffer) explained:
+;; error out right here if buffer is set to read only, and if not then
+;; continue to erase-buffer which does just that.
+
+;; outline of 'copy-to-buffer' function definition in pseudo-code:
+;;
+;; (let (BIND-oldbuf-TO-VALUE-OF-current-buffer)
+;;     (WITH-THE-BUFFER-YOU-ARE-COPYING-TO
+;;       (BUT-DO-NOT-ERASE-OR-COPY-TO-A-READ-ONLY-BUFFER)
+;;       (erase-buffer)
+;;       (save-excursion
+;;         INSERT-SUBSTRING-FROM-oldbuf-INTO-BUFFER)))

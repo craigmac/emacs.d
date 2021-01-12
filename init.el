@@ -106,4 +106,11 @@
 
 (when (equal system-type 'darwin))
 (when (equal system-type 'gnu/linux))
+
+;; Working area / Playground
+
+;; TODO: Alt-` bound to show terminal along bottom, switching
+;; to it if buffer exists otherwise creating it.
+;; hints: 'get-buffer-create'
+
 ;;; init.el ends here
