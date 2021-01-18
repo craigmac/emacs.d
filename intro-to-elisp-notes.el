@@ -496,3 +496,880 @@ START and END specify the portion of the current buffer to be copied."
 ;;       (erase-buffer)
 ;;       (save-excursion
 ;;         INSERT-SUBSTRING-FROM-oldbuf-INTO-BUFFER)))
+
+;; Case study of 'insert-buffer' function definition:
+;; it copies another buffer into current buffer. Reverse of append|copy-to-buf
+
+;; Original code (simplified later in 2003, but harder to understand):
+
+;; IMPORTANT: shows 'interactive' with a buffer that might be read only!
+;; and the distinction between the NAME of an object and the ACTUAL object
+;; NAME refers to.
+
+(defun tutorial-insert-buffer (buf)
+  "Insert after point the contents of BUF.
+Puts mark after the inserted text. BUF can be buffer or buffer name."
+  ;; "*b" for situation when current buffer is a read-only buffer.
+  ;; if old-insert-buffer called when current buffer RO, error msg
+  ;; printed and beep/blink may happen (if not turned off).
+  ;; "B" allows non-existing buffers but we need BUF to be existing
+  ;; and not read-only
+  (interactive "*bInsert buffer: ")
+  ;; 'or' purpose: ensure BUF not bound to a buffer AND not just
+  ;; the NAME of a buffer. Could be done with 'if' as well like:
+  ;; (if (not (real-buff? buf) get-real-buffer buf)) pseudo-code
+  ;; or:
+  ;; (if (not (bufferp buf))
+  ;;     (setq buf (get-buffer buf)))
+  ;; The job is make sure BUF is a buffer object not just a buffer
+  ;; name. If it is just a name of a buffer, we grab the actual
+  ;; buffer object.
+  (or (bufferp buf)
+      (setq buf (get-buffer buf)))
+  ;; code that copies the other buffer (BUF) into current buffer
+  (let (start end newmark)		; set these to nil
+    (save-excursion
+      (save-excursion
+	(set-buffer buf)			  ; switch target to BUF
+	;; bind our let variables start and end to full buffer range
+	(setq start (point-min) end (point-max))) ; inner save-ex. done
+      (insert-buffer-substring buf start end)
+      (setq newmark (point)))		; outer save-excursion done
+    ;; sets a mark to this location: end of inserted text
+    (push-mark newmark))) 		; let and defun done
+
+;; 'bufferp' returns true if arg is a buffer object, false is just
+;; the name of a buffer. 'p' is added to many function names to show
+;; they are 'predicates' (test whether argument/s are true or false).
+
+;; newer Body for insert-buffer
+;; (push-mark
+;;  (save-excursion
+;;    (insert-buffer-substring (get-buffer buf))
+;;    (point)))
+;;  nil
+
+;; buffer object returned by 'get-buffer' is passed to 'insert-buffer-sub..'
+;; which inserts the whole of the buffer since we did not specify anything
+;; else (no start or end ranges).
+
+;; location into which buffer was inserted is recorded by push-mark, then
+;; we return nil, the value of the last command because we are doing this
+;; for side-effect only, not to return any value.
+
+;; 5.3 Complete Definition of 'beginning-of-buffer'
+
+;; 'beginning-of-buffer' function args: M-< without prefix calls it as is,
+;; to move to beginning of the accessible portion of the current buffer,
+;; or you can use e.g., C-u 7 M-< to move to the point 70% of the way
+;; through the buffer (alt. M-7 M-<).
+
+;; keyword '&optional arg' allows arg to be optional argument in elisp.
+
+;; pseudo-code of full definition
+
+;; (defun tutorial-beginning-of-buffer (&optional arg)
+;;   "Documentation string..."
+;;   (interactive "P")
+;;   (or (is-the-argument-a-cons-cell arg)
+;;       (and are-both-transient-mark-mode-and-mark-active-true)
+;;       (push-mark))
+;;   (let (determine-size-and-set-it)
+;;     (goto-char
+;;      (if-there-is-an-argument
+;;       figure-out-where-to-go
+;;       else-go-to
+;;       (point-min))))
+;;   do-nicety)
+
+;; "P" in interactive means pass raw prefix arg if there is one to
+;; the function.
+
+;; goto-char uses if-then-else expression to figure out where to put
+;; the cursor if there is an arg that is not a cons cell. cons explained
+;; later chapters. It checks through if- expression here whether
+;; ARG has a non-nil value and whether it is a cons cell (consp).
+
+;; If ARG is not nil and is not a cons cell: true when 'beginning-of-buffer'
+;; is called with a numeric ARG via e.g., M-7 or C-u 7, then this test will
+;; return true and the 'then' part of the 'if' expression is eval'd.
+;; Else part is eval'd is the function was called without an argument, e.g.,
+;; M-< directly with no prefix argument (e.g., M-5 or C-u 5). Else part
+;; simply goes to 'point-min' value, start of accessible buffer.
+
+;; full definition:
+(defun tutorial-beginning-of-buffer (&optional arg)
+  "Move point to the beginning of the buffer; leave mark at previous position.
+With \\[universal-argument] prefix, do not set mark at previous position.
+With numering arg N, e.g., M-7 or C-u 7 prefix, put point N/10 of the way
+from the beginning.
+
+If the buffer is narrowed, this command uses the beginning and size
+of the accessible part of the buffer. Don't use this command in
+Lips programs! \(goto-char (point-min)) is faster and avoids clobbering mark."
+  (interactive "P")
+  (or (consp arg)
+      (and transient-mark-mode mark-active)
+      (push-mark))
+  (let ((size (- (point-max) (point-min))))
+    (goto-char (if (and arg (not (consp arg)))
+		   (+ (point-min)
+		      (if (> size 10000) ; avoid overflow for large buffers
+			  (* (prefix-numeric-value arg)
+			     (/ size 10))
+			;; else
+			(/ (+ 10 (* size (prefix-numeric-value arg)))
+			   10)))
+		 (point-min))))		; let finish
+  (if (and arg (not (consp arg))) (forward-line 1)))
+
+;; using \\[...] in the doc string tells lisp intepreter to sub whatever
+;; key is current bound to the symbol in [...] and show that instead, e.g.,
+;; "With C-u prefix, ..."
+
+
+;; 5.4 Review
+
+;; 'or': evaluate each arg given and return first argument that is non-nil,
+;; aka true, if none return 'nil'.
+
+;; 'and': eval each arg given and if no args eval to nil, return last argument
+;; given to 'and' (truthy return). Returns 'nil' upon first arg eval'd to 'nil'
+
+;; '&optional': keyword used before function arg name to denote optional
+;; argument to user.
+
+;; 'prefix-numeric-value': convert raw prefix arg produced by
+;; '(interactive "P")' to a numeric value.
+
+;; 'forward-line': move point to beginning of next line, or if arg is > 1,
+;; that many lines forward of point. If it can't go any further it returns
+;; the number of additional lines it was supposed to move but could not.
+
+;; 'erase-buffer': delete entire contents of current buffer.
+
+;; 'bufferp': return 't' if arg is a buffer object (NOT just a name of a
+;; buffer); otherwise, returns 'nil'.
+
+;; 5.5 Exercise
+
+;; Write an interactive function with an optional argument that tests
+;; whether its argument, a number, is greater than or equal to, or else,
+;; less than the value of ‘fill-column’, and tells you which, in a message.
+;; However, if you do not pass an argument to the function, use 56 as a
+;; default value.
+
+(defun tutorial-greater-than-fill-column-p (&optional arg)
+  (interactive "P")
+  ;; value of arg seems to be 1 if we don't pass arg, i.e., we
+  ;; just run it directly with M-x tutorial-greater-than-fill-column-p<RET>
+  ;; so let's use that to default to 56 when arg is 1.
+  (let ((n (prefix-numeric-value arg)))
+    (if (= n 1) (setq n 56))
+    ;; let body
+    (if (or
+	 (> n fill-column)
+	 (= n fill-column))
+	(message "Arg value is greater or equal to fill-column")
+      (message "Arg value is less than fill-column"))))
+
+
+fill-column
+;; 70
+
+(setq arg 1)
+;; 1
+
+(equal arg 1)
+;; t
+
+(= arg 1)
+;; t
+
+;; 6 - Narrowing and Widening
+
+;; narrowing means to focus on a part of buffer without affecting other
+;; parts of buffer. Like opening a window with just the selected text in it.
+;; widening is the opposite. Putting the narrowed buffer region back into its
+;; context (region) of the whole buffer.
+
+;; narrow-to-region, i.e., C-x n n
+;; widen-to-region, i.e., C-x n w
+
+;; often lisp functions need the whole buffer so they remove
+;; any narrowing near the beginning of the function definition
+;; and restoring it after.
+
+;; done with (save-restriction BODY... ) special form. If used with
+;; save-excursion which is done often, save-excursion should come first,
+;; aka be the outer expression
+
+;; 6.2 - 'what-line' command
+
+(defun tutorial-what-line ()
+  "Print current line num in the buffer of point."
+  (interactive)
+  (save-restriction
+    (widen)
+    (save-excursion
+      (beginning-of-line)
+      (message "Line %d"
+	       (1+ (count-lines 1 (point)))))))
+
+;; 6.3 Exercise
+
+;; Write a function that will display the first 60 characters of the
+;; current buffer, even if you have narrowed the buffer to its latter half
+;; so that the first line is inaccessible.  Restore point, mark, and
+;; narrowing.  For this exercise, you need to use a whole potpourri of
+;; functions, including ‘save-restriction’, ‘widen’, ‘goto-char’,
+;; ‘point-min’, ‘message’, and ‘buffer-substring’.
+
+(defun first-60-chars-of-buffer ()
+  "Display first 60 characters of the current buffer, widened."
+  (save-restriction
+    (widen)
+    (message (buffer-substring point-min 60))))
+
+
+;; 7 'car','cdr','cons': Fundamental Functions
+
+;; cons is short for 'construct'.
+;; 'car' for 'Contents of Address Register' aka first location
+;; in a list.
+
+;; 'cdr' is contents of Decrement Register aka whole list minus
+;; first element in the list
+
+;; car and cdr are non-destructive (don't alter original list)
+(car '(rose violet daisy))
+;;rose
+
+(cdr '(rose violet daisy buttercup))
+;; (violet daisy buttercup)
+
+(cdr '((lion tiger cheetah)
+       (gazelle antelope zebra)
+       (whale dolphin seal)))
+;; ((gazelle antelope zebra) (whale dolphin seal))
+
+(cons 'pine '(fir oak maple))
+;;(pine fir oak maple)
+
+(cons 'buttercup ())			; first needs empty list!
+;; (buttercup)
+
+(cons 'daisy '(buttercup))		; has to cons onto a list!
+;; (daisy buttercup)
+
+(cons 'violet '(daisy buttercup))
+;; (violet daisy buttercup)
+
+(length '(buttercup))
+;; 1
+
+(length (cons 'violet '(daisy buttercup)))
+;; 3
+
+(length ())
+;; 0
+
+;; 7.3 'nthcdr'
+
+(cdr (cdr '(pine fir oak maple)))
+;; (oak maple)
+
+;; easier with nthcdr. non-destructive.
+(nthcdr 2 '(pine fir oak maple))
+;; (oak maple)
+
+;; nil when element index does not exist
+(nthcdr 5 '(pine fir))
+;; nil
+
+;; 7.4 'nth'
+
+;; get value for n position (0-indexed) in a list
+(nth 0 '(one two three))
+;; one
+
+;; return nil if out of bounds index passed
+(nth 5 '(five six))
+;; nil
+
+;; 7.5 'setcar' - destructive (changes original list)
+
+;; way it works is that it can't have a quoted list, so
+;; we need to use the 'list' function to create one, manual says
+;; a quoted form like '(a b c d e) would yield a list that
+;; is part of the program and bad things could happen if we tried
+;; to change part of the program while running it. He says generally
+;; program's components should be constant while program is running.
+;; QUESTION: how does '(...) versus (list '... '...) differ?
+(setq animal (list 'a 'b 'c 'd 'e))
+
+animal
+;; (a b c d e)
+
+(setcar animal 'hippo)
+;; hippo
+;; returns this value but we don't need it
+
+animal
+;; (hippo b c d e)
+;; removed 'a' and put in 'hippo' instead
+
+;; 7.6 'setcdr'
+
+;; like 'setcar' but for cdr: replaces the second and subsequent
+;; elements of a list but keeps the first element. Think of it like
+;; a push operation in other languages.
+
+(setq more-animals (list 'horse 'cow 'sheep 'goat))
+;; (horse cow sheep goat)
+
+(setcdr more-animals '(cat dog))
+;; (cat dog)
+
+more-animals
+;; (horse cat dog)
+
+;; 7.7 Exercise
+
+;; Construct a list of four birds by evaluating several expressions with
+;; ‘cons’.  Find out what happens when you ‘cons’ a list onto itself.
+;; Replace the first element of the list of four birds with a fish.
+;; Replace the rest of that list with a list of other fish.
+
+
+;; 8 - Cutting and Storing Text
+
+;; 8.1 'zap-to-char' function definition
+(defun tutorial-zap-to-char (arg char)
+  "Kill up to and including ARG'th occurrence of CHAR.
+     Case is ignored if `case-fold-search' is non-nil in the current buffer.
+     Goes backward if ARG is negative; error if CHAR not found."
+  (interactive "p\ncZap to char: ")
+  (if (char-table-p translation-table-for-input)
+      (setq char (or (aref translation-table-for-input char) char)))
+  (kill-region (point) (progn
+                         (search-forward (char-to-string char)
+                                         nil nil arg)
+                         (point))))
+;; 'progn' is a special form that causes each of its arg to evaluated
+;; in sequence and then returns the value of the last one. The args in
+;; between are evaluated only for the side-effects, like switching buffer
+;; or moving point. The values produced by them are discarded inside of
+;; of progn, except for the last argument.
+
+;; 8.2 'kill-region'
+
+;;  kill-region in essence calls condition-case which takes 3 args:
+;; in this function the 1st arg does nothing; the 2nd arg contains
+;; the code that does the work when all goes well; the 3rd arg contains
+;; the code called in case of an error.
+
+(defun tutorial-kill-region (beg end)
+  "Kill (\"cut\") text between point and mark.
+     This deletes the text from the buffer and saves it in the kill ring.
+     The command \\[yank] can retrieve it from there. ... "
+
+  ;; Since order matters, pass point first.
+  (interactive (list (point) (mark)))
+  ;; And tell us if we cannot cut the text.
+  ;; 'unless' is an 'if' without a then-part.
+  (unless (and beg end)
+    (error "The mark is not set now, so there is no region"))
+
+  ;;  'condition-case' takes three arguments.
+  ;;    If the first argument is nil, as it is here,
+  ;;    information about the error signal is not
+  ;;    stored for use by another function.
+  (condition-case nil
+
+      ;;  The second argument to 'condition-case' tells the
+      ;;    Lisp interpreter what to do when all goes well.
+
+      ;;    It starts with a 'let' function that extracts the string
+      ;;    and tests whether it exists.  If so (that is what the
+      ;;    'when' checks), it calls an 'if' function that determines
+      ;;    whether the previous command was another call to
+      ;;    'kill-region'; if it was, then the new text is appended to
+      ;;    the previous text; if not, then a different function,
+      ;;    'kill-new', is called.
+
+      ;;    The 'kill-append' function concatenates the new string and
+      ;;    the old.  The 'kill-new' function inserts text into a new
+      ;;    item in the kill ring.
+
+      ;;    'when' is an 'if' without an else-part.  The second 'when'
+      ;;    again checks whether the current string exists; in
+      ;;    addition, it checks whether the previous command was
+      ;;    another call to 'kill-region'.  If one or the other
+      ;;    condition is true, then it sets the current command to
+      ;;    be 'kill-region'.
+      (let ((string (filter-buffer-substring beg end t)))
+        (when string                    ;STRING is nil if BEG = END
+          ;; Add that string to the kill ring, one way or another.
+          (if (eq last-command 'kill-region)
+              ;;    − 'yank-handler' is an optional argument to
+              ;;    'kill-region' that tells the 'kill-append' and
+              ;;    'kill-new' functions how deal with properties
+              ;;    added to the text, such as 'bold' or 'italics'.
+              (kill-append string (< end beg) yank-handler)
+            (kill-new string nil yank-handler)))
+        (when (or string (eq last-command 'kill-region))
+          (setq this-command 'kill-region))
+        nil)
+
+    ;;   The third argument to 'condition-case' tells the interpreter
+    ;;    what to do with an error.
+    ;;    The third argument has a conditions part and a body part.
+    ;;    If the conditions are met (in this case,
+    ;;             if text or buffer are read-only)
+    ;;    then the body is executed.
+    ;;    The first part of the third argument is the following:
+    ((buffer-read-only text-read-only) ;; the if-part
+     ;; ...  the then-part
+     (copy-region-as-kill beg end)
+     ;;    Next, also as part of the then-part, set this-command, so
+     ;;    it will be set in an error
+     (setq this-command 'kill-region)
+     ;;    Finally, in the then-part, send a message if you may copy
+     ;;    the text to the kill ring without signaling an error, but
+     ;;    don't if you may not.
+     (if kill-read-only-ok
+         (progn (message "Read only text copied to kill ring") nil)
+       (barf-if-buffer-read-only)
+       ;; If the buffer isn't read-only, the text is.
+       (signal 'text-read-only (list (current-buffer)))))))
+
+;; 8.3 'copy-region-as kill'
+
+;; copy region of text from a buffer and saves it in kill-ring
+
+;; if copy-region-as-kill is called right after kill-region, we append
+;; the newly copied text to the previously copied text (from the kill-region)
+;; , this way when you yank back you get the whole thing. If some
+;; other command precedes 'copy-region-as-kill' we just create a separate
+;; entry in the kill ring instead of added it to the last element in the
+;; kill ring
+
+(defun tutorial-copy-region-as-kill (beg end)
+  "Save the region as if killed, but don't kill it.
+     Details of some side-effects:
+     In Transient Mark mode, deactivate the mark.
+     If `interprogram-cut-function' is non-nil, also save the text for a window
+     system cut and paste."
+  (interactive "r")			; r for region (start end numbers)
+  ;; explained in text above why, append-case test
+  (if (eq last-command 'kill-region)
+      (kill-append (filter-buffer-substring beg end) (< end beg))
+    ;; else
+    (kill-new (filter-buffer-substring beg end)))
+  (if transient-mark-mode		; per doc string explanation
+      ;; stops the region from highlighting
+      (setq deactivate-mark t))
+  nil)					; return nil
+
+;; this-command variable: normally when function executing emacs sets it
+;; to the value of function being executed, and the 'last-command' value
+;; is set to previous 'this-command' value.
+
+;; kill-append function defintion and explanation:
+(defun tutorial-kill-append (string before-p &optional yank-handler)
+  "Append STRING to end of latest kill in kill ring. If BEFORE-P is
+non-nill, prepend instead."
+  (let* ((cur (car kill-ring)))
+    ;; use BEFORE-P arg to determine whether to prepend STRING to cur,
+    ;; or else append STRING to cur.
+    (kill-new (if before-p
+		  (concat string cur)
+		(concat cur string))
+	      ;; REPLACE argument to 'kill-new', return first non-nil
+	      ;; expression as the REPLACE argument
+	      (or (= (length cur) 0)	; nothing in kill-ring
+		  (equal yank-handler
+			 (get-text-property 0 'yank-handler cur)))
+	      ;; &optional yank-handler argument, return it
+	      yank-handler)))
+
+;; concat examples
+(concat "abc" "def")
+;; "abcdef"
+
+(concat "new "
+	(car '("first element" "this will be gone")))
+;; "new first element"
+
+(concat (car
+	 '("first element" "foobar")) " modified")
+;; "first element modified"
+
+;; 'kill-new' function and explanation
+(defun tutorial-kill-new (string &optional replace yank-handler)
+  "Make STRING the latest kill in the kill ring.
+     Set `kill-ring-yank-pointer' to point to it.
+
+     If `interprogram-cut-function' is non-nil, apply it to STRING.
+     Optional second argument REPLACE non-nil means that STRING will replace
+     the front of the kill ring, rather than being added to the list.
+     ..."
+  (if (> (length string) 0)
+      (if yank-handler
+          (put-text-property 0 (length string)
+                             'yank-handler yank-handler string))
+    (if yank-handler
+        (signal 'args-out-of-range
+                (list string "yank-handler specified for empty string"))))
+  ;; fboundp tests whether given symbol is bound to function, which it will
+  ;; be if menu bar is activated. When it is
+  (if (fboundp 'menu-bar-update-yank-menu)
+      (menu-bar-update-yank-menu string (and replace (car kill-ring))))
+  ;; critical lines
+  (if (and replace kill-ring)		; kills exists AND replace arg given
+      ;; then
+      (setcar kill-ring string)		; destructive. changes first element
+    ;; else
+    (add-to-list kill-ring string)	; self-explanatory, used to be 'push'
+    ;; 60 kills by default. If larger set last element to 'nil' by
+    ;; using 'nthcdr' and 'setcdr' by grabbing last element and then
+    ;; using setcdr to set it to 'nil'
+    (if (> (length kill-ring) kill-ring-max)
+	;; avoid overly long kill ring size
+        (setcdr (nthcdr (1- kill-ring-max) kill-ring) nil)))
+  (setq kill-ring-yank-pointer kill-ring)
+  ;;  add copied string to whatever os level copy paste function might
+  ;; exist, e.g., on x11 'x-select-text' function does this.
+  (if interprogram-cut-function
+      (funcall interprogram-cut-function string (not replace))))
+
+;; 'push' function explanation: (formerly in above fn where add-to-list is)
+
+(setq example-list '("Here is a clause" "another clause"))
+;; ("Here is a clause" "another clause")
+
+example-list
+;; ("Here is a clause" "another clause")
+
+(push "a third clause" example-list)
+;; ("a third clause" "Here is a clause" "another clause")
+
+;; how setcdr and nthcdr work together:
+
+(setq trees (list 'maple 'oak 'pine 'birch))
+;; (maple oak pine birch)
+
+(nthcdr 1 trees)
+;; (oak pine birch)
+
+(nthcdr 2 trees)
+;; (pine birch)
+
+;; setcdr sets the cdr of a list, so it needs a list and a value
+;; to set that element to so we pass it the 2 cdr, which is
+;; (pine birch) and the setcdr sets birch to nil, effectively
+;; removing it from the list.
+(setcdr (nthcdr 2 trees) nil)
+;; nil
+
+trees
+;; (maple oak pine)
+;; no more birch!
+
+;; 8.4 Digression into C
+
+;; 'copy-region-as-kill' uses -> 'filter-buffer-substring' (elisp), which
+;; uses 'delete-and-extract-region' function written in C, not elisp.
+;; It is written as an instance of a C macro (template for code).
+
+;; 8.5 Initializing a Variable with 'defvar'
+
+;; defvar is a special form (name comes from 'define variable')
+
+;; similar to 'setq' but only sets value of the variable if the var
+;; does not already have a value. defvar also has a doc string.
+
+;; kill-ring is defined using it, and sets default list to nil if
+;; nothing is in it.
+
+(defvar tutorial-kill-ring nil
+  "List of killed text sequences...")
+
+tutorial-kill-ring
+;; nil
+
+;; defvar with '*' explanation:
+
+;; use 'defcustom' now instead, because it a macro that hooks into the
+;; 'customize' help system and has much better integration especially
+;; if other users going to use this variable.
+
+;; In the past, elisp writers would add asterisk like:
+;; "*Buffer name for ..." in documentation string of defvar to show
+;; user they might want to change it. Simply a convention. Use
+;; defcustom instead!
+
+;; 'set-variable' command will change value of a symbol will emacs
+;; is running but it does not make it permanent. That's what init.el/.emacs
+;; file is for.
+
+;; Use M-x set-variable<RET> to see what variables you can set in your
+;; .emacs file!
+
+;; 9 - How Lists are Implemented
+
+;; the atom 'rose' is recorded as four contiguous letters: 'r', 'o',
+;; 's', 'e' (like in C strings).
+
+;; A list is kept differently: it is kept using a series of 'pairs of pointers'
+
+;; In the series, the first pointer of a pair point to: atom or another list.
+;; the second pointer in the pair points to: next pair of pointers, or symbol
+;; 'nil' (marks end of list)
+
+;; pointers here having same meaning as in C, memory address of what is
+;; pointed to.
+
+;; linked lists, basically.
+
+;; 'bouquet' symbol holds address of the first pair of boxes
+(setq bouquet '(rose violet buttercup))
+;; (rose violet buttercup)
+
+;; can be drawn like this:
+     ;; bouquet
+     ;;  |
+     ;;  |    --------------       ---------------       ----------------
+     ;;  |   | car   | cdr  |     | car    | cdr  |     | car     | cdr  |
+     ;;   -->| rose  |   o------->| violet |   o------->| butter- |  nil |
+     ;;      |       |      |     |        |      |     | cup     |      |
+     ;;       --------------       ---------------       ----------------
+
+;; the structure of a symbol is made up of address: 'bouquet' consists
+;; of a group of address-boxes (memory locations), 1 of which is the address
+;; start for the printed word 'bouquet' and the 2nd of which is the
+;; address of any function definition attached to that symbol, if any,
+;; and the 3rd in this case is the address of the first pair of address
+;; for the list '(rose violet buttercup).
+
+;; use cdr to bind a symbol only sets the address to where the symbol
+;; points to (further down the list, in bare cdr case, the memory
+;; address of the second element of a list), but does not alter the
+;; original list, we are reassign a new value to the symbol's pointer.
+
+;; in lisp/elisp a pair of 'address-boxes' as we have been referring to them
+;; are called a "cons cell" or a "dotted pair". 'cons' function adds
+;; a new pair of address to the front a series of addresses.
+
+(setq flowers (cdr bouquet))
+;; (violet buttercup)
+
+(setq bouquet (cons 'lily bouquet))
+;; (lily rose violet buttercup)
+
+;; can be diagrammed:
+
+     ;; bouquet                       flowers
+     ;;   |                             |
+     ;;   |     ___ ___        ___ ___  |     ___ ___       ___ ___
+     ;;    --> |   |   |      |   |   |  --> |   |   |     |   |   |
+     ;;        |___|___|----> |___|___|----> |___|___|---->|___|___|--> nil
+     ;;          |              |              |             |
+     ;;          |              |              |             |
+     ;;           --> lily      --> rose       --> violet    --> buttercup
+
+;; however this does not change the value of symbol 'flowers':
+
+flowers
+;; (violet buttercup)
+
+bouquet
+;; (lily lily rose violet buttercup)
+
+(eq (cdr (cdr bouquet)) flowers)
+;; t
+
+;; In Lisp, to get the cdr of list -> just get the address of next cons cell
+;; in the series. For car of list -> get the address of the first element
+;; of the list. Simple. To 'cons' (construct) a new element on a list,
+;; we are just added a new 'cons cell' to the front of the list, e.g.,
+;; (setq my-list (cons 'new-symbol my-list))
+
+;; 9.1 - Symbols as a Chest of Drawers (metaphor)
+
+;; a symbol being a chest with 'drawers'. what is put in each drawer is
+;; the address of a value or function definition, if any. We can see
+;; a symbol as a chest with 4 drawers:
+
+;;'bouqet' symbol as a 'chest of drawers' metaphor:
+
+             ;;     Chest of Drawers            Contents of Drawers
+
+             ;;     __   o0O0o   __
+             ;;   /                 \
+             ;;  ---------------------
+             ;; |    directions to    |            [map to]
+             ;; |     symbol name     |             bouquet
+             ;; |                     |
+             ;; +---------------------+
+             ;; |    directions to    |
+             ;; |  symbol definition  |             [none]
+             ;; |                     |
+             ;; +---------------------+
+             ;; |    directions to    |            [map to]
+             ;; |    variable value   |             (rose violet buttercup)
+             ;; |                     |
+             ;; +---------------------+
+             ;; |    directions to    |
+             ;; |    property list    |             [not described here]
+             ;; |                     |
+             ;; +---------------------+
+             ;; |/                   \|
+
+;; we can see that a symbol contains 4 main 'drawers'.
+
+;; 9.2 - Exercise
+
+;; Set ‘flowers’ to ‘violet’ and ‘buttercup’.  Cons two more flowers on to
+;; this list and set this new list to ‘more-flowers’.  Set the CAR of
+;; ‘flowers’ to a fish.  What does the ‘more-flowers’ list now contain?
+
+(setq flowers (list 'violet 'buttercup))
+;; (violet buttercup)
+
+(setq more-flowers (cons 'dandelion flowers))
+;; (dandelion violet buttercup)
+
+(setq more-flowers (cons 'rose flowers))
+;; (rose violet buttercup)
+
+more-flowers
+;; (rose violet buttercup)
+
+(setcar flowers 'tuna)
+;; tuna
+
+flowers
+;; (tuna buttercup)
+
+more-flowers
+;; (rose tuna buttercup)
+;; now second element (cdr more-flowers) has had its address updated
+;; by the (setcar flowers 'tuna) call, which is destructive (changes it).
+;; so now why we we evaluated more-flowers, the address lookup stored in
+;; (cdr more-flowers), second element of this list, returns the newly
+;; updated value 'tuna' instead of returning previous 'violet'.
+
+;; 10 - Yanking Text Back
+
+;; kill ring is simple a list of textual strings, i.e.:
+;; ("foo" "bar" "more")
+
+;; C-y brings back "foo" first, and M-y cycles to next element in the list,
+;; so "bar", only if C-y was first pressed (last command was a yank). If
+;; you press M-y without a preceeding yank command, M-y tells you yank
+;; command didn't happen first, so it won't fetch next element.
+
+;; insertion code part for 'yank' and 'yank-pop' functions is:
+;; (insert (car kill-ring-yank-pointer))
+;; 'kill-ring-yank-pointer' is what tracks current address to fetch
+;; from the kill-ring.
+
+;; 10.3 Exercises
+
+;; Using ‘C-h v’ (‘describe-variable’), look at the value of your kill
+;; ring.  Add several items to your kill ring; look at its value
+;; again.  Using ‘M-y’ (‘yank-pop)’, move all the way around the kill
+;; ring.  How many items were in your kill ring?  Find the value of
+;; ‘kill-ring-max’.  Was your kill ring full, or could you have kept
+;;  more blocks of text within it?
+
+(length kill-ring)
+;; 29
+
+kill-ring-max
+;; 60
+
+;; Using ‘nthcdr’ and ‘car’, construct a series of expressions to
+;; return the first, second, third, and fourth elements of a list.
+
+(defalias '1st 'car)
+
+(1st '("car" "train"))
+;; "car"
+
+(defun 2nd (l)
+  "Return second element of list L."
+  (interactive)
+  (car (nthcdr 1 l)))
+
+(2nd '("rose" "gold" "tree"))
+;; "gold"
+
+(defun 3rd (l)
+  "Return third element of list L."
+  (interactive)
+  (car (nthcdr 2 l)))
+
+(3rd '("one" "two" "three" "four"))
+;; "three"
+
+(defun 4th (l)
+  "Return fourth element of list L."
+  (interactive)
+  (car (nthcdr 3 l)))
+
+(4th '("one" "two" "three" "four"))
+;; "four"
+
+;; 11 - Loops and Recursion
+
+;; 11.1 'while' function
+
+;; special form; if first arg is false, interpreter skips rest of
+;; expression body of while, if first arg true, evals body then
+;; tests first arg again.
+
+;; (while true-or-false-test
+;;   BODY...)
+
+;; the value returned by eval a while is value of the true of false test.
+;; as side-effect, while loop will return 'nil' or false regardless
+;; if it has looped 1 or 1000 times or none at all. A while expr
+;; that evals successfully never returns a true value! And we dont' care,
+;; because we are using while for it's side effect.
+
+(setq empty-list ())
+;; nil
+
+empty-list
+;; nil
+
+(setq animals '(gazelle giraffe lion tiger))
+;; (gazelle giraffe lion tiger)
+
+;; (while animals
+;;   ...)
+;; would run while-body as long as there are items in the list. So, forever,
+;; or as some people do, we have a form that cdr's the list down as it loops
+;; each time, basically create a bounded for loop.
+
+;; 11.1.2 'print-elements-of-list' function
+
+;; illustrates the 'while' loop on a list:
+
+(setq animals '(gazelle giraffe lion tiger))
+;; (gazelle giraffe lion tiger)
+
+(defun tut-print-elements-of-list (list)
+  "Print each element of LIST on a line of its own."
+  (while list
+    (print (car list))
+    (setq list (cdr list))))
+
+(tut-print-elements-of-list animals)
+;; nil (output will print to echo area one on each line with 'nil' at end,
+;; or if you do C-u C-x C-e, will show animals in echo area and print 'nil'
+;; to buffer text. When while loop ends it always returns a nil because test
+;; failed, which is fine and what we want to happen.
