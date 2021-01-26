@@ -1373,3 +1373,178 @@ empty-list
 ;; or if you do C-u C-x C-e, will show animals in echo area and print 'nil'
 ;; to buffer text. When while loop ends it always returns a nil because test
 ;; failed, which is fine and what we want to happen.
+
+(defun tut-triangle (number-of-rows)
+  "Showing incrementing loop details."
+  (let ((total 0)
+	(row-number 1))
+    (while (<= row-number number-of-rows)
+      (setq total (+ total row-number))
+      (setq row-number (1+ row-number)))
+    total))
+
+(tut-triangle 4)
+;; 10
+
+;; 11.2 'dolist' and 'dotimes'
+
+;; dolist works like a while loop that cdrs down the list, just
+;; easier to remember and write. dolist and dotimes are macros.
+
+;; dotimes macro similar to dolist, expecpt it loops a specific number of times
+
+;; (let (value)
+;;   (dotimes (number 3)
+;;     (setq value (cons number value)))
+;;   value)
+
+;; 11.3 Recursion
+
+;; (defun NAME-OF-RECURSIVE-FUNCTION (ARGUMENT-LIST)
+;;   "DOCUMENTATION..."
+;;   (if DO-AGAIN-TEST
+;;     BODY...
+;;     (NAME-OF-RECURSIVE-FUNCTION
+;;          NEXT-STEP-EXPRESSION)))
+
+(setq animals '(gazelle giraffe lion tiger))
+;; (gazelle giraffe lion tiger)
+
+(defun print-elements-recursively (list)
+  "Print each element of LIST on a line of its own.
+     Uses recursion."
+  (when list                            ; do-again-test
+    (print (car list))              ; body
+    (print-elements-recursively     ; recursive call
+     (cdr list))))                  ; next-step-expression
+
+(print-elements-recursively animals)
+;; nil (prints to echo area and returns 'nil' when 'when' fails
+
+;; recursion instead of a counter version
+(defun recurse-triangle (number)
+  "Use recursion this time."
+  (if (= number 1)			; base-recursion test
+      1					; return 1
+    (+ number
+       (recurse-triangle
+	(1- number)))))			; next-step expression
+
+(recurse-triangle 7)
+;; 28
+
+;; recursion version using 'cond' (conditional, like switch statement
+;; in C). Returns nil is none of its true or false test true.
+;; (cond
+;;  (test-one first-consequent)
+;;  (test-two second-consequent)
+;;  (..)
+;;  (test-N N-consequent))
+
+(defun tutorial-triangle-using-cond (number)
+  (cond ((<= number 0) 0)
+        ((= number 1) 1)
+        ((> number 1)
+         (+ number (triangle-using-cond (1- number))))))
+
+;; 11.3.6 Recursive Patterns
+
+;; common recursive patterns, each involving a list.
+
+;; 'every' pattern of recursion: an action is performed on every
+;; element of a list:
+;; * If list empty return 'nil'
+;; * Else, act on car of the list:
+;;  * through recursive call by the function on the rest (cdr) of the list,
+;;  * and optionally combine the acted-on element, using 'cons',
+;;    with the results of acting on the rest.
+
+;; example:
+(defun square-each (numbers-list)
+  "Doo doo"
+  (if (not numbers-list)
+      nil
+    (cons
+     (* (car numbers-list) (car numbers-list)) ; double the current num
+     (square-each (cdr numbers-list)))))       ; next-step expression
+
+
+(square-each '(1 2 3))
+;; (1 4 9)
+
+;; 'accumulate' pattern, is like 'every' pattern using 'cons' except that
+;; 'cons' is not used, but some other combiner function.
+
+;; example:
+(defun add-elements (numbers-list)
+  "Foo doo"
+  (if (not numbers-list)
+      0
+    (+ (car numbers-list) (add-elements (cdr numbers-list)))))
+
+(add-elements '(2 4 6 8))
+;; 20
+
+;; 'keep' pattern: each element is tested and the results are kept only
+;; if the element meets a criterion.
+
+(defun keep-three-letter-words (words)
+  "Return a list of three letter words found in WORDS."
+  (cond
+   ((not words) nil)		; stop/base condition
+   ;; condition 2, current symbol is length of 3
+   ((eq 3 (length (symbol-name (car words))))
+    (cons (car words) (keep-three-letter-words (cdr words))))
+   ;; cond 3, decide when to skip element, recursively call with shorter list
+   (t (keep-three-letter-words (cdr words)))))
+
+(keep-three-letter-words '(one two three four five six))
+;; (one two six)
+
+;; 11.3.7 Recursion without Deferments
+
+;; usually with recursions the intermediary calculations are deferred
+;; until the recursion is done and then they are all done, the drawback of
+;; this is that it requires more storage for cpu to be able to unwind
+;; all the way back to first call of the recursive function.
+
+;; 11.3.8 No Deferment Solution
+
+;; Pattern is usually done this way: write two function defintions, an
+;; initialization function and a helper function which does the work and
+;; returns after each run. The phrase "tail recursive" is used to describe
+;; such a process, one that uses constant space.
+
+(defun triangle-initialization (number)
+  "FOOBAR."
+  (triangle-recursive-helper 0 0 number))
+
+(defun triangle-recursive-helper (sum counter number)
+  "Return SUM, using COUNTER, through NUMBER, inclusive. This is the helper
+component of a two function duo that uses recursion."
+  (if (> counter number)
+      sum
+    (triangle-recursive-helper (+ sum counter) ; sum
+			       (1+ counter)    ; counter
+			       number)))       ; number
+(triangle-initialization 2)
+;; 3
+
+;; 12 - Regular Expression Searches
+
+;; covering 'forward-sentence', 'forward-paragraph' and 're-search-forward'
+
+;; 'sentence-end' is bound to a pattern that marks eof of a sentence.
+;; by default it finds sentence end as two spaces after a period,
+;; question mark or exclamtion mark. However in a file the two spaces
+;; can be a tab or EOL as well so we need to include these 3 items as
+;; alternates:
+
+;; \\($\\| \\|  \\)
+;;   EOL  Tab SPCs
+
+;; 2 backslashes required before | and ( to denote special, the first
+;; backslash quoting the second so than an actual backslash is read, e.g.,
+;; \( is read.
+
+;; 16 - Your '.emacs' File

@@ -1,25 +1,26 @@
-;;; init.el
-;
+;;; init.el --- Emacs 27.1+ init file.
 ;;; Commentary:
-; Where this init.el file should lie:
-; Windows GUI => %APPDATA%/.emacs.d/init.el
-; WSL => $HOME/.emacs.d/init.el
-; macOS => $HOME/.emacs.d/init.el
-; Linux => $HOME/.emacs.d/init.el
-;
+;; Where this init.el file should lie:
+;; Windows GUI => %APPDATA%/.emacs.d/init.el
+;; WSL => $HOME/.emacs.d/init.el
+;; macOS => $HOME/.emacs.d/init.el
+;; Linux => $HOME/.emacs.d/init.el
+					;
 ;;; Code:
-(setq debug-on-error nil)
-
 (require 'package)
-(add-to-list 'package-archives
-	     '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 (package-initialize)
 
-; TODO: void-variable on first try, fix this
-(when (not package-archive-contents)
-  package-refresh-contents)
+;;; ELPA
+(setq package-selected-packages
+      '(modus-themes))
+(package-install-selected-packages)
 
-; Built-in variable settings
+;; INTERNAL VARIABLES
+(let ((normal-gc-cons-threshold (* 20 1024 1024))
+      (init-gc-cons-threshold (* 128 1024 1024)))
+  (setq gc-cons-threshold init-gc-cons-threshold)
+  (add-hook 'emacs-startup-hook
+            (lambda () (setq gc-cons-threshold normal-gc-cons-threshold))))
 (defconst private-dir (expand-file-name "private" user-emacs-directory))
 (setq user-full-name "C.D. MacEachern"
       user-mail-address "craigmaceachern@fastmail.com"
@@ -36,50 +37,80 @@
       ring-bell-function 'ignore
       use-file-dialog nil
       load-prefer-newer t)
+(setq-default c-default-style '((java-mode . "java")
+			(awk-mode . "awk")
+			(cc-mode . "stroustrup")))
+(put 'narrow-to-region 'disabled nil)
 
-; Built-in Modes
-(column-number-mode t)
-(show-paren-mode)
-(auto-fill-mode t)
-(blink-cursor-mode -1)
-(fset 'yes-or-no-p 'y-or-n-p)
-(global-auto-revert-mode)
-(global-eldoc-mode)
-(global-visual-line-mode)
-(show-paren-mode)
-(transient-mark-mode)
+;; OS-SPECIFIC
+(when (equal system-type 'windows-nt)
+  (setq-default w32-pipe-read-delay 0)
+  (setenv "PATH"
+    (concat "C:\\gnuwin32\\bin" path-separator (getenv "PATH")))
+  ;; github.com/magit/with-editor/issues/41 solution for Windows
+  (defadvice server-ensure-safe-dir
+      (around my-around-server-ensure-safe-dir activate)
+    "Ignores any errors raised from server-ensure-safe-dir"
+    (ignore-errors ad-do-it)))
+(when (eq system-type 'darwin)
+  (setq mac-option-modifier 'meta)
+  (setq mac-command-modifier 'control)
+  (setq mac-control-modifier 'control)
+  (setq mac-right-option-modifier 'none))
+(when (equal system-type 'gnu/linux))
 
-(semantic-mode)
-
-; Keybindings
+;; KEYBINDINGS
 (global-set-key (kbd "C-+") 'text-scale-increase)
 (global-set-key (kbd "C--") 'text-scale-decrease)
 (global-set-key (kbd "C-z") 'zap-up-to-char)
+(global-set-key "\C-o" 'occur)
+(global-set-key (kbd "<f6>") 'compile)
+(global-set-key "%" 'match-paren)
+(global-set-key [remap dabbrev-expand] 'hippie-expand)
+(global-set-key (kbd "M-i") 'imenu)
 
-; Hooks
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-(add-hook 'php-mode-hook 'my-php-mode)
-(add-hook 'python-mode 'my-python-mode)
+(global-unset-key (kbd "M-SPC"))
+(global-set-key (kbd "M-SPC w") 'save-buffer)
+(global-set-key (kbd "M-SPC b") 'ibuffer)
 
-(defun my-php-mode ()
-  "Additional PHP programming setup."
+;; FUNCTIONS
+(defun compile-and-run ()
+  "Compile C++ buffer with C++17 standard and then run the binary."
   (interactive)
-  (local-set-key (kbd "<f1>") 'my-php-function-lookup))
+  (let* ((src (file-name-nondirectory (buffer-file-name)))
+	(exe (file-name-sans-extension src)))
+    (compile (concat "g++ -std=c++17 -Wall -Wextra " src " -o " exe " && ./" exe))))
 
-(defun my-php-function-lookup ()
-  "Lookup symbol under point using web manual."
+(defun my-c++-mode-hook ()
+  "My personal C++ mode setup."
   (interactive)
-  (let ((symbol (symbol-at-point)))
-    (if (not symbol)
-        (message "No symbol at point to lookup.")
-      (browse-url (concat "http://php.net/manual-lookup.php?pattern="
-                          (symbol-name symbol))))))
+  (c-toggle-auto-hungry-state 1))
 
 (defun my-python-mode ()
   "Additional setup for python files."
   (interactive))
 
-; UI
+(defun match-paren (arg)
+  "Go to the matching paren ARG if on a paren; otherwise insert %."
+  (interactive "p")
+  (cond ((looking-at "\\s(") (forward-list 1) (backward-char 1))
+        ((looking-at "\\s)") (forward-char 1) (backward-list 1))
+        (t (self-insert-command (or arg 1)))))
+
+;; HOOKS
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+(add-hook 'php-mode-hook 'my-php-mode)
+(add-hook 'python-mode 'my-python-mode)
+(setq-default major-mode 'text-mode)
+(add-hook 'text-mode-hook 'turn-on-auto-fill)
+(add-hook 'c++-mode-hook 'my-c++-mode-hook)
+;; with dired-x loaded, M-o toggles omitting each dired buffer.
+(add-hook 'dired-load-hook (lambda () (require 'dired-x)))
+;; make omitting the default view
+(add-hook 'dired-mode-hook 'dired-omit-toggle)
+(add-hook 'prog-mode 'linum-mode)
+
+;; UI
 (custom-set-faces
  '(default ((t (:family "Triplicate T4c"
 			:foundry "outline"
@@ -87,40 +118,30 @@
 			:weight normal
 			:height 180
 			:width normal)))))
-; Disable GUI elements
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
-
-
-
-(add-hook 'prog-mode-hook 'linum-mode)
-
-; OS-Specific
-(when (equal system-type 'windows-nt)
-  (setq w32-pipe-read-delay 0)
-
-  ;; github.com/magit/with-editor/issues/41 solution for Windows
-  (defadvice server-ensure-safe-dir
-      (around my-around-server-ensure-safe-dir activate)
-    "Ignores any errors raised from server-ensure-safe-dir"
-    (ignore-errors ad-do-it)))
-
-(when (equal system-type 'darwin))
-(when (equal system-type 'gnu/linux))
-
-;; Working area / Playground
-
-;; TODO: Alt-` bound to show terminal along bottom, switching
-;; to it if buffer exists otherwise creating it.
-;; hints: 'get-buffer-create'
-
-(put 'narrow-to-region 'disabled nil)
-
-(setq package-selected-packages
-      '(modus-themes))
-(package-install-selected-packages)
 (require 'modus-themes)
 (load-theme 'modus-operandi t)
 
+;; BUILT-IN PACKAGES/SETTINGS
+(column-number-mode t)
+(show-paren-mode)
+(auto-fill-mode t)
+(if (fboundp 'blink-cursor-mode)
+    (blink-cursor-mode -1))
+(fset 'yes-or-no-p 'y-or-n-p)
+(global-auto-revert-mode)
+(global-eldoc-mode)
+(global-visual-line-mode)
+(show-paren-mode)
+(transient-mark-mode)
+(auto-image-file-mode)
+(semantic-mode)
+(windmove-default-keybindings)
+
+(require 'ido)
+(ido-mode 1)
+(setq ido-everywhere t)
+(setq ido-enable-flex-matching t)
 ;;; init.el ends here
