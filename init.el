@@ -5,22 +5,55 @@
 ;; WSL => $HOME/.emacs.d/init.el
 ;; macOS => $HOME/.emacs.d/init.el
 ;; Linux => $HOME/.emacs.d/init.el
-					;
-;;; Code:
-(require 'package)
-(package-initialize)
 
-;;; ELPA
+;;; Code:
+;;; PACKAGES
+(require 'package)
 (setq package-selected-packages
-      '(modus-themes))
+      '(ace-window
+	avy
+	counsel
+	company
+	eglot
+	modus-operandi-theme
+	project
+	ivy
+	swiper
+	which-key))
 (package-install-selected-packages)
 
+(global-set-key (kbd "M-o") 'ace-window)
+(global-set-key (kbd "C-;") 'avy-goto-char)
+(global-set-key (kbd "M-n") 'flycheck-next-error)
+(global-set-key (kbd "M-p") 'flycheck-previous-error)
+
+(load-theme 'modus-operandi t)
+
+(global-company-mode t)
+(setq company-idle-delay 0)
+(setq company-minimum-prefix-length 2)
+
+(counsel-mode)
+(global-set-key (kbd "M-x") 'counsel-M-x)
+(global-set-key (kbd "C-x C-f") 'counsel-find-file)
+(global-set-key (kbd "C-x b") 'counsel-switch-buffer)
+(global-set-key (kbd "C-x 4 b") 'counsel-switch-buffer-other-window)
+(global-set-key (kbd "C-`") 'counsel-switch-to-shell-buffer)
+;; find files limited to git tracked ones
+(global-set-key (kbd "C-c g") 'counsel-git)
+;; live git grep of files
+(global-set-key (kbd "C-c j") 'counsel-git-grep)
+;; same but using ag to find anything not-git controlled
+(global-set-key (kbd "C-c k") 'counsel-ag)
+
+(ivy-mode)
+(setq ivy-use-virtual-buffers t)
+(global-set-key (kbd "C-s") 'swiper)
+(global-set-key (kbd "C-r") 'swiper)
+
+(which-key-mode)
+
 ;; INTERNAL VARIABLES
-(let ((normal-gc-cons-threshold (* 20 1024 1024))
-      (init-gc-cons-threshold (* 128 1024 1024)))
-  (setq gc-cons-threshold init-gc-cons-threshold)
-  (add-hook 'emacs-startup-hook
-            (lambda () (setq gc-cons-threshold normal-gc-cons-threshold))))
 (defconst private-dir (expand-file-name "private" user-emacs-directory))
 (setq user-full-name "C.D. MacEachern"
       user-mail-address "craigmaceachern@fastmail.com"
@@ -53,6 +86,10 @@
     "Ignores any errors raised from server-ensure-safe-dir"
     (ignore-errors ad-do-it)))
 (when (eq system-type 'darwin)
+  ;; add homebrew bin
+  (setenv "PATH"
+	  (concat "/usr/local/bin:" (getenv "PATH")))
+  (add-to-list 'exec-path "/usr/local/bin")
   (setq mac-option-modifier 'meta)
   (setq mac-command-modifier 'control)
   (setq mac-control-modifier 'control)
@@ -112,17 +149,14 @@
 
 ;; UI
 (custom-set-faces
- '(default ((t (:family "Triplicate T4c"
-			:foundry "outline"
-			:slant normal
-			:weight normal
-			:height 180
-			:width normal)))))
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default ((t (:family "Triplicate T4c" :foundry "outline" :slant normal :weight normal :height 180 :width normal)))))
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
-(require 'modus-themes)
-(load-theme 'modus-operandi t)
 
 ;; BUILT-IN PACKAGES/SETTINGS
 (column-number-mode t)
@@ -138,10 +172,18 @@
 (transient-mark-mode)
 (auto-image-file-mode)
 (semantic-mode)
-(windmove-default-keybindings)
 
-(require 'ido)
-(ido-mode 1)
+
 (setq ido-everywhere t)
 (setq ido-enable-flex-matching t)
+(ido-mode 1)
+(setq ido-use-filename-at-point 'guess)
+(setq ido-create-new-buffer 'always)
+
 ;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages '(ace-window)))

@@ -5,3 +5,8 @@ auto-save-list/
 eshell/
 ido.last
 semanticdb/
+recentf
+projects
+*.el~
+*.*~$
+ido.last~
