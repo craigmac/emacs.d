@@ -1,9 +1,9 @@
 (require 'package)
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
-(unless package-archive-contents
-  (package-refresh-contents))
+
+(require 'modus-themes)
+(load-theme 'modus-operandi t)
 
 ;; INTERNAL VARIABLES
 (defconst private-dir (expand-file-name "private" user-emacs-directory))
@@ -31,6 +31,14 @@
 ;; SHIPPED MODES
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+(global-visual-line-mode)
+(show-paren-mode)
+(transient-mark-mode)
+
+(semantic-mode)
+(global-linum-mode)
+(add-hook 'prog-mode-hook 'linum-mode)
+(save-place-mode t)
 
 ;; OS-SPECIFIC
 (when (eq system-type 'darwin)
@@ -46,7 +54,6 @@
 ;; Organized using Top Level Nodes from C-h i d m Emacs<RET>
 ;; 1 The Organization of the Screen
 
-;; MODELINE
 (size-indication-mode)
 (line-number-mode)
 (column-number-mode)
@@ -75,7 +82,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(modus-themes magit company)))
+ '(custom-safe-themes
+   '("ddff22007104a1317014e48ff3d4911a83771a4ccf57185ccebf7f91339dbfb8" default))
+ '(package-selected-packages '(modus-themes)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
