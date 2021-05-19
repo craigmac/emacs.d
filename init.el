@@ -1,15 +1,108 @@
 (require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; Using https was causing permanent hangs on macOS
+;; although M-x eww RET https://wikipedia.org RET works,
+;; so might be actually a package signing/verification problem?
+(add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
 (package-initialize)
 
-(require 'modus-themes)
-(require 'ido)
-(require 'flymake)
-(require 'compile)
+;; use-package notes:
+;; :init keyword => execute code before pkg loaded; accepts 1+ forms. Should
+;; only put in here what would succeed in running even if pkg not on system.
+;; :config keyword => execute code after pkg load; deferred lazy load.
+(eval-when-compile
+  (require 'use-package))
 
-(load-theme 'modus-operandi t)
+;; DEBUG
+;; C-g to debug hangs, like when calling e.g. (while t (print 'foo'))
+;; or when calling synchronously an external program that never finishes
+;; (toggle-debug-on-quit)
 
-;; INTERNAL VARIABLES
+;; Debug a command causing a hang where C-g doesn't work, try again using:
+;; M-x debug-on-entry RET call-process RET
+
+(require 'use-package-ensure)
+(setq use-package-always-ensure t)
+
+(use-package modus-themes
+  :init
+  (load-theme 'modus-operandi t))
+
+;; Ripgrep support
+(use-package rg
+  :config
+  (rg-enable-default-bindings))
+
+  
+(use-package magit)
+
+;; github.com/purcell/exec-path-from-shell
+;; This is really important on macOS where env inheritance is wonky,
+;; otherwise some env things are out of sync with terminal env, like not
+;; finding 'rg' binary even when /usr/local/bin is in the exec-path.
+(use-package exec-path-from-shell
+  :init
+  (exec-path-from-shell-initialize))
+
+;; maybe rebind find-file to call projectile-find-file always
+(use-package projectile
+  :bind-keymap
+  ("C-c p" . projectile-command-map)
+  :custom
+  (projectile-project-search-path '("~/git")))
+
+(use-package diminish)
+
+(use-package which-key
+  :diminish
+  :config
+  (which-key-mode))
+
+(use-package eldoc
+  :diminish)
+
+(use-package company
+  :config
+  (global-company-mode)
+  :custom
+  (company-minimum-prefix-length 2))
+
+(use-package ace-jump-mode
+  ;; creates autoload for ace-jump-mode and defers until use, then binds
+  ;; a key to that command, all in one.
+  ;; Literal way to do the same thing would be:
+  ;; :commands ace-jump-mode
+  ;; :init
+  ;; (bind-key "C-." 'ace-jump-mode)
+  :bind ("C-." . ace-jump-mode))
+
+;; better M-x prompt, especially with IDO stuff enabled
+(use-package smex)
+
+(global-set-key (kbd "M-x") 'smex)
+(global-set-key (kbd "M-X") 'smex-major-mode-commands)
+;; in case we want default M-x experience
+(global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)
+
+;; Flymake ships with emacs, but flycheck might be better--investigate!
+(use-package flymake
+  :config
+  (flymake-mode))
+
+;; vertical display of IDO things
+(use-package ido-vertical-mode
+  :config
+  (ido-vertical-mode nil))
+
+;; TODO: get this into the above use-package somehow
+(define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
+(define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
+
+(use-package compile)
+
+;; Don't write 'M-x customize RET' set vars to this file, use this one instead
+(setq custom-file "~/.emacs.d/custom-file.el")
+(load-file custom-file)
+
 (setq debug-on-error nil)
 (defconst private-dir (expand-file-name "private" user-emacs-directory))
 (setq user-full-name "C.D. MacEachern")
@@ -34,10 +127,6 @@
 (global-set-key (kbd "s-.") (lambda () (interactive)(find-file
 						     "~/.emacs.d/init.el")))
 
-;; Flymake ships with emacs, but flycheck might be better--investigate!
-(flymake-mode)
-(define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
-(define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
 
 ;; SHIPPED MODES
 (tool-bar-mode -1)
@@ -46,7 +135,6 @@
 (show-paren-mode)
 (transient-mark-mode)
 (semantic-mode)
-(global-linum-mode)
 (add-hook 'prog-mode-hook 'linum-mode)
 (save-place-mode t)
 (auto-fill-mode t)
@@ -59,11 +147,12 @@
 (global-set-key [remap dabbrev-expand] 'hippie-expand)
 ;; Load image files as actual images (e.g., when find-file foo.jpeg see image)
 (auto-image-file-mode)
+(global-hl-line-mode t)
 
 ;; (I)nteractively (Do) Mode: better find-file, buffer-find, etc.
 ;; TODO: add to the list of ignores for ido, like elpa/ semanticdb/ eshell/
 ;; auto-save-list/ .git/ node_modules/ .cache/ .vscode/ etc.
-
+(require 'ido)
 (ido-mode t)
 (setq ido-everywhere t)
 (setq ido-enable-flex-matching t)
@@ -113,16 +202,21 @@
 (add-to-list 'vc-directory-exclusion-list "elpa")
 
 
-;; OS-SPECIFIC
+;; macOS
 (when (eq system-type 'darwin)
+  (add-to-list 'exec-path "/usr/local/bin")
   ; sets Option key on mac to be Super (defaults to Command key)
   (setq mac-option-modifier 'super)
   ; sets Command key to be Meta/Alt instead, much easier to use on mac keyboards
   (setq mac-command-modifier 'meta)
-  (setq mac-control-modifier 'control))
+  (setq mac-control-modifier 'control)
+  ;; ls on mac is not GNU so we use this to emulate, according
+  ;; to help of 'dired-use-ls-dired'
+  (setq ls-lisp-use-insert-directory-program nil)
+  (require 'ls-lisp))
 
 ;; HOOKS
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
+;;(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 ;; Organized using Top Level Nodes from C-h i d m Emacs<RET>
 ;; 1 The Organization of the Screen
@@ -130,9 +224,6 @@
 (size-indication-mode)
 (line-number-mode)
 (column-number-mode)
-(display-time-mode)
-(setq display-time-day-and-date t)
-(display-battery-mode)
 
 ;; MAIL
 ;; 'Mail' appears next to load level if mail setup and there is unread mail
@@ -147,20 +238,3 @@
 ;; M-<Tab>: do it with <Esc><Tab>, or the unblocked C-M-i (completion-at-point)
 ;; M-<Space>: do it with <Esc><Space>, just runs command just-one-space, so not needed
 ;; C-M-d: use C-M-down instead, and use C-M-up to go up
-
-
-
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(custom-safe-themes
-   '("ddff22007104a1317014e48ff3d4911a83771a4ccf57185ccebf7f91339dbfb8" default))
- '(package-selected-packages '(modus-themes)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(default ((t (:inherit nil :extend nil :stipple nil :background "White" :foreground "Black" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 160 :width normal :foundry "nil" :family "JetBrains Mono NL")))))
