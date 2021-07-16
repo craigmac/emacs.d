@@ -14,6 +14,8 @@
  '(dired-create-destination-dirs 'ask)
  '(dired-hide-details-hide-symlink-targets nil)
  '(dired-load-hook '(load-library))
+ '(electric-quote-mode t)
+ '(global-flycheck-mode t)
  '(global-hl-line-mode t)
  '(grep-find-ignored-directories
    '("elpa" "SCCS" "RCS" "CVS" "MCVS" ".src" ".svn" ".git" ".hg" ".bzr" "_MTN" "_darcs" "{arch}" ".jekyll-cache" ".vscode" "_includes" "_site" ".cache"))
@@ -21,7 +23,8 @@
  '(grep-save-buffers t)
  '(grep-scroll-output t)
  '(package-selected-packages
-   '(org-bullets smex ido-vertical-mode color-theme-sanityinc-tomorrow exec-path-from-shell diminish which-key projectile ace-jump-mode use-package rg markdown-mode yaml-mode yaml modus-themes))
+   '(marginalia embark-consult embark consult orderless selectrum-prescient selectrum flycheck ido projectile helm modus-theme flx-ido company magit smex ido-vertical-mode exec-path-from-shell diminish which-key ace-jump-mode use-package rg markdown-mode yaml-mode modus-themes))
+ '(projectile-mode t nil (projectile))
  '(rg-executable "rg")
  '(which-key-mode t))
 (custom-set-faces
