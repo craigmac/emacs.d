@@ -27,9 +27,9 @@
 (eval-when-compile
   (require 'use-package))
 
-;; TODO: Using https was causing permanent hangs on macOS although M-x eww RET
+;; Using https was causing permanent hangs on macOS although M-x eww RET
 ;; https://wikipedia.org RET works, so might be actually a package
-;; signing/verification problem?
+;; signing/verification problem. https on Windows is also no-bueno.
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
 (add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/") t)
 
@@ -38,19 +38,21 @@
 ;; :config keyword runs *after* package loaded, whether now or lazily
 (setq use-package-always-ensure t)
 
-(use-package ace-jump-mode
-  ;; :bind here creates an autoload for ace-jump-mode that defers
-  ;; until we actually use it, and binds to our keybinding.
-  ;; It's a shorter way of doing:
-  ;; (use-package ace-jump-mode
-  ;;   :commands ace-jump-mode
-  ;;   :init
-  ;;     (bind-key "C-." 'ace-jump-mode))
-  ;; ':commands' keyword creates autoloads for those commands and defers loading
-  ;; of the module until they are used.
-  :bind ("C-." . ace-jump-mode))
-
 (use-package all-the-icons)
+
+(use-package anzu
+  ;; UI in modeline to show in real time regex matches
+  :config
+  (global-anzu-mode)
+  :bind
+  ("M-%" . anzu-query-replace)
+  ("C-M-%" . anzu-query-replace-regexp))
+
+(use-package avy
+  :config
+  (setq avy-background t)
+  (setq avy-style 'at-full)
+  :bind ("C-j" . avy-goto-char))
 
 (use-package company
   :init
@@ -60,6 +62,7 @@
   ;;  (setq company-tooltip-align-annotations t)
   ;; when near bottom of window, flip to fix it
   ;;  (setq company-tooltip-flip-when-above t)
+
   :config
   (global-company-mode))
 
@@ -80,6 +83,10 @@
 (use-package doom-themes)
 
 (use-package diminish)
+
+(use-package editorconfig
+  :config
+  (editorconfig-mode))
 
 (use-package eldoc
   :config
@@ -120,9 +127,12 @@
   :bind ("C-=" . er/expand-region))
 
 (use-package diff-hl
+  :after (magit)
   :config
   (diff-hl-margin-mode)
-  (global-diff-hl-mode))
+  (global-diff-hl-mode)
+  (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
 
 (use-package flycheck
   :init
@@ -134,6 +144,8 @@
   (global-set-key (kbd "<f9>") 'flycheck-mode)
   (define-key flycheck-mode-map (kbd "M-n") 'flycheck-next-error)
   (define-key flycheck-mode-map (kbd "M-p") 'flycheck-previous-error))
+
+(use-package git-timemachine)
 
 (use-package helpful
   :config
@@ -157,6 +169,10 @@
   ;; don't find this very useful, but it's frequently useful to only
   ;; look at interactive functions.
   (global-set-key (kbd "C-h C") #'helpful-command))
+
+(use-package hl-todo
+  :config
+  (global-hl-todo-mode))
 
 (use-package magit)
 
@@ -203,7 +219,13 @@
 
 (use-package smartparens
   :config
-  (smartparens-global-mode))
+  (require 'smartparens-config)
+  (setq sp-base-key-bindings 'paredit)
+  (setq sp-autoskip-closing-pair 'always)
+  (setq sp-hybrid-kill-entire-symbol nil)
+  (sp-use-paredit-bindings)
+  (show-smartparens-global-mode +1)
+  (setq blink-matching-paren nil))
 
 (use-package rg
   :config
@@ -212,6 +234,10 @@
 (use-package undo-tree
   ;; visual undo for easy jumping back and forth between history
   :config
+  ;; autosave the undo-tree history
+  (setq undo-tree-history-directory-alist
+	`((".*" . ,temporary-file-directory)))
+  (setq undo-tree-auto-save-history t)
   (global-undo-tree-mode))
 
 (use-package which-key
@@ -221,6 +247,8 @@
 (use-package yaml-mode)
 
 ;; SETTINGS
+;; Used througout config, was 'prelude-savefile-dir' originally.
+(setq cdm-savefile-dir (expand-file-name "savefile" user-emacs-directory))
 (setq custom-file "~/.emacs.d/custom-file.el") ; 'M-x customize' vars go here instead
 (load-file custom-file)
 (setq debug-on-error nil)
@@ -241,15 +269,63 @@
 (setq ring-bell-function 'ignore)
 (setq use-file-dialog nil)
 (setq load-prefer-newer t)
-(setq make-backup-files nil)
 (put 'narrow-to-region 'disabled nil)
 (setq gc-cons-threshold 20000000) 	; allow 20MB of memory before garbage collection
 (setq sentence-end-double-space nil)	; sentence begins with single space!
 (fset 'yes-or-no-p 'y-or-n-p)		; easier yes/no with y/n instead
+;; enable narrowing commands
+(put 'narrow-to-region 'disabled nil)
+(put 'narrow-to-page 'disabled nil)
+(put 'narrow-to-defun 'disabled nil)
+;; dired - reuse current buffer by pressing 'a'
+(put 'dired-find-alternate-file 'disabled nil)
 
+;; enabled change region case commands
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+
+;; enable erase-buffer command
+(put 'erase-buffer 'disabled nil)
+
+;; Death to the tabs!  However, tabs historically indent to the next
+;; 8-character offset; specifying anything else will cause *mass*
+;; confusion, as it will change the appearance of every existing file.
+;; In some cases (python), even worse -- it will change the semantics
+;; (meaning) of the program.
+;;
+;; Emacs modes typically provide a standard means to change the
+;; indentation width -- eg. c-basic-offset: use that to adjust your
+;; personal indentation width, while maintaining the style (and
+;; meaning) of any files you load.
+(setq-default indent-tabs-mode nil)   ;; don't use tabs to indent
+(setq-default tab-width 8)            ;; but maintain correct appearance
+
+;; Newline at end of file
+(setq require-final-newline t)
+
+;; hippie expand is dabbrev expand on steroids
+(setq hippie-expand-try-functions-list '(try-expand-dabbrev
+                                         try-expand-dabbrev-all-buffers
+                                         try-expand-dabbrev-from-kill
+                                         try-complete-file-name-partially
+                                         try-complete-file-name
+                                         try-expand-all-abbrevs
+                                         try-expand-list
+                                         try-expand-line
+                                         try-complete-lisp-symbol-partially
+                                         try-complete-lisp-symbol))
+
+;; indent line if not indented already, otherwise complete thing at point
+(setq tab-always-indent 'complete)
+
+;; nicer scrolling
+(setq scroll-conservatively 100000
+      scroll-preserve-screen-position t) ; keep point in place, e.g., C/M-v
 
 ;; Built-in packages (not GNU/MELPA)
-(tool-bar-mode -1)
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+
 (scroll-bar-mode -1)
 (global-visual-line-mode)
 (show-paren-mode)
@@ -265,20 +341,96 @@
 ;; call hippie-expand instead (it's better). Rare cases I use this.
 (global-set-key [remap dabbrev-expand] 'hippie-expand)
 ;; Load image files as actual images (e.g., when find-file foo.jpeg see image)
-(auto-image-file-mode)
-(size-indication-mode)
+(auto-image-file-mode)			; open .png as image not text buffer
+(size-indication-mode)			; e.g., 60:8 49% in modeline
 (column-number-mode)
 (global-display-line-numbers-mode)	; replaces 'nlinum-mode'
-(set-fringe-mode 10)
+;;(set-fringe-mode 10)
+(delete-selection-mode)
+;; enable winner-mode to manage window configurations.
+;; C-c Left/Right to undo/redo last window change
+(winner-mode)
 
-(dolist (hook '(prog-mode-hook text-mode-hook))
-  (add-hook hook #'whitespace-mode))
-(add-hook 'before-save-hook #'whitespace-cleanup)
+
+;; meaningful names for buffers with the same name
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'forward)
+(setq uniquify-separator "/")
+(setq uniquify-after-kill-buffer-p t)    ; rename after killing uniquified
+(setq uniquify-ignore-buffers-re "^\\*") ; don't muck with special buffers
+
+;; abbrev config
+(add-hook 'text-mode-hook 'abbrev-mode)
+
+;; make a shell script executable automatically on save
+(add-hook 'after-save-hook
+          'executable-make-buffer-file-executable-if-script-p)
+
+;; .zsh file is shell script too
+(add-to-list 'auto-mode-alist '("\\.zsh\\'" . shell-script-mode))
+
+
+;; saveplace remembers your location in a file when saving files
+(setq save-place-file (expand-file-name "saveplace" cdm-savefile-dir))
+;; activate it for all buffers
+(save-place-mode)
+
+;; savehist keeps track of some history
+(require 'savehist)
+(setq savehist-additional-variables
+      ;; search entries
+      '(search-ring regexp-search-ring)
+      ;; save every minute
+      savehist-autosave-interval 60
+      ;; keep the home clean
+      savehist-file (expand-file-name "savehist" cdm-savefile-dir))
+(savehist-mode)
+
+;; save recent files
+(require 'recentf)
+(setq recentf-save-file (expand-file-name "recentf" cdm-savefile-dir)
+      recentf-max-saved-items 500
+      recentf-max-menu-items 15
+      ;; disable recentf-cleanup on Emacs start, because it can cause
+      ;; problems with remote files
+      recentf-auto-cleanup 'never)
+
+(defun cdm-recentf-exclude-p (file)
+  "A predicate to decide whether to exclude FILE from recentf."
+  (let ((file-dir (file-truename (file-name-directory file))))
+    (cl-some (lambda (dir)
+               (string-prefix-p dir file-dir))
+             (mapcar 'file-truename (list cdm-savefile-dir package-user-dir)))))
+
+(add-to-list 'recentf-exclude 'cdm-recentf-exclude-p)
+
+(recentf-mode +1)
+
+;; use shift + arrow keys to switch between visible buffers
+(require 'windmove)
+(windmove-default-keybindings)
+
+;; tramp, for sudo access
+(require 'tramp)
+;; keep in mind known issues with zsh - see emacs wiki
+(setq tramp-default-method "ssh")
+
+(set-default 'imenu-auto-rescan t)
+
+
+;; store all backup and autosave files in the tmp dir
+(setq backup-directory-alist
+      `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+      `((".*" ,temporary-file-directory t)))
+
+
 
 (require 'compile)
-(setq compilation-scroll-output t)
-(setq compilation-always-kill t)
-(setq compilation-auto-jump-to-first-error t) ; see 'compilation-skip-threshold'
+(setq compilation-scroll-output t	; scroll compile buffer as it grows
+      compilation-ask-about-save nil	; just save and compile don't ask
+      compilation-always-kill t		; kill old compile proc before next one
+      compilation-auto-jump-to-first-error t) ; see 'compilation-skip-threshold'
 (global-set-key (kbd "<f5>") 'compile)
 (global-set-key (kbd "C-<f5>") 'kill-compilation)
 (global-set-key (kbd "<f6>") 'recompile)
@@ -296,9 +448,17 @@
 ;; we add here to best share it around
 (add-to-list 'vc-directory-exclusion-list "elpa")
 
-(with-no-warnings
-  (setq whitespace-line-column 80
-	whitespace-style '(face tabs empty trailing lines-tail)))
+;; more useful frame title, that show either a file or a
+;; buffer name (if the buffer isn't visiting a file)
+(setq frame-title-format
+      '("" invocation-name " " (:eval (if (buffer-file-name)
+					  (abbreviate-file-name (buffer-file-name))
+					"%b"))))
+
+(require 'whitespace)
+(setq whitespace-line-column 80
+      whitespace-style '(face tabs empty trailing lines-tail))
+(add-hook 'before-save-hook #'whitespace-cleanup)
 
 (setq dired-recursive-deletes 'always
       dired-recursive-copies 'always)
@@ -325,12 +485,30 @@
   (setq mac-control-modifier 'control)
   (setq mac-command-modifier 'super) ;; Win key on my MS kb, use as s-<key>
   (setq mac-option-modifier 'meta) ;; left-alt on my MS kb, use a M-... keybinding
-  (setq mac-right-option-modifier 'none) ;; right-alt on my MS kb, keep macOS default
-  (with-no-warnings
+  (setq mac-right-option-modifier 'none) ;; right-alt on my MS kb
+  ;; From Prelude: enable emoji, and stop the UI from freezing when trying to
+  ;; display them.
+  (when (fboundp 'set-fontset-font)
+    (set-fontset-font t 'unicode "Apple Color Emoji" nil 'prepend))
+    (with-no-warnings
     ;; ’ls’ on macOS is not GNU ls by default so we emulate standard
     ;; GNU ls using the following (from docs on ’dired-use-ls-dired’):
     (setq ls-lisp-use-insert-directory-program nil)
     (require 'ls-lisp)))
+
+(defun cdm-swap-meta-and-super ()
+  "Swap the mapping of Meta and Super.
+Very useful for people using their Mac with a
+Windows external keyboard from time to time."
+  (interactive)
+  (if (eq mac-command-modifier 'super)
+      (progn
+        (setq mac-command-modifier 'meta)
+        (setq mac-option-modifier 'super)
+        (message "Command is now bound to META and Option is bound to SUPER."))
+    (setq mac-command-modifier 'super)
+    (setq mac-option-modifier 'meta)
+    (message "Command is now bound to SUPER and Option is bound to META.")))
 
 ;; Replace ’typewriter’ style straight quotes of various kinds with the
 ;; appropriate and nicer “curved” variants.
@@ -380,6 +558,8 @@
 (global-set-key (kbd "M-`") #'crux-visit-shell-buffer)
 (global-set-key (kbd "s-j") #'crux-top-join-line)
 (global-unset-key (kbd "<f10>")) ; usually pops up menu for key nav
+
+
 
 ;; TODO: turn off for individual buffer types, locally, like eshell, git, help buffers
 ;; TODO: turn off individual buffers like init.el for flycheck stuff
