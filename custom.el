@@ -4,6 +4,8 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(menu-bar-mode nil)
+ '(package-selected-packages
+   '(edit-indirect yaml-mode which-key use-package undo-tree smex smartparens selectrum-prescient rg projectile orderless modus-themes markdown-mode marginalia magit ido-vertical-mode hl-todo helpful helm git-timemachine git-gutter-fringe flycheck flx-ido expand-region exec-path-from-shell embark-consult eldoc editorconfig doom-themes doom-modeline diminish diff-hl crux company avy anzu ace-jump-mode))
  '(show-paren-mode t)
  '(tool-bar-mode nil))
 (custom-set-faces

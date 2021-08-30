@@ -25,7 +25,7 @@
 
 ;; From https://github.com/jwiegley/use-package#package-installation:
 (eval-when-compile
-  (require 'use-package))
+	(require 'use-package))
 
 ;; Using https was causing permanent hangs on macOS although M-x eww RET
 ;; https://wikipedia.org RET works, so might be actually a package
@@ -41,208 +41,227 @@
 (use-package all-the-icons)
 
 (use-package anzu
-  ;; UI in modeline to show in real time regex matches
-  :config
-  (global-anzu-mode)
-  :bind
-  ("M-%" . anzu-query-replace)
-  ("C-M-%" . anzu-query-replace-regexp))
+	;; UI in modeline to show in real time regex matches
+	:config
+	(global-anzu-mode)
+	:bind
+	("M-%" . anzu-query-replace)
+	("C-M-%" . anzu-query-replace-regexp))
 
 (use-package avy
-  :config
-  (setq avy-background t)
-  (setq avy-style 'at-full)
-  :bind ("C-j" . avy-goto-char))
+	:config
+	(setq avy-background t)
+	(setq avy-style 'at-full)
+	:bind ("C-j" . avy-goto-char))
 
 (use-package company
-  :init
-  (setq company-idle-delay 0.1)
-  (setq company-minimum-prefix-length 2)
-  (setq company-tooltip-limit 10)
-  ;;  (setq company-tooltip-align-annotations t)
-  ;; when near bottom of window, flip to fix it
-  ;;  (setq company-tooltip-flip-when-above t)
+	:init
+	(setq company-idle-delay 0.1)
+	(setq company-minimum-prefix-length 2)
+	(setq company-tooltip-limit 10)
+	;;  (setq company-tooltip-align-annotations t)
+	;; when near bottom of window, flip to fix it
+	;;  (setq company-tooltip-flip-when-above t)
 
-  :config
-  (global-company-mode))
+	:config
+	(global-company-mode))
 
 (use-package consult
-  ;; enhances several minibuffer-centric commands and provides new ones
-  :config
-  (global-set-key (kbd "<f7>") 'consult-outline)
-  (global-set-key [C-tab] 'consult-buffer)
-  (global-set-key (kbd "C-x C-r") 'consult-recent-file))
+	;; enhances several minibuffer-centric commands and provides new ones
+	:config
+	(global-set-key (kbd "<f7>") 'consult-outline)
+	(global-set-key [C-tab] 'consult-buffer)
+	(global-set-key (kbd "C-x C-r") 'consult-recent-file))
 
 ;; Useful functions that are included in Emacs Prelude kit.
 (use-package crux)
 
 (use-package doom-modeline
-  :init (doom-modeline-mode)
-  :custom ((doom-modeline-height 14)))
+	:init (doom-modeline-mode)
+	:custom ((doom-modeline-height 14)))
 
 (use-package doom-themes)
 
 (use-package diminish)
 
+;; requirement for markdown-mode to enable edit code block with C-c '
+(use-package edit-indirect)
+
 (use-package editorconfig
-  :config
-  (editorconfig-mode))
+	:config
+	(editorconfig-mode))
 
 (use-package eldoc
-  :config
-  (global-eldoc-mode))
+	:config
+	(global-eldoc-mode))
 
 (use-package embark
-  ;; visualizes the list of completion candidates, as well as provides actions
-  ;; we can perform on them, on a per-item or per-set basis. Like
-  ;; a right-click functionality to work with candidates.
-  :bind
-  (("M-RET" . embark-act))
-  :init
-  ;; optionally replace the key help with a completion-read interface
-  (setq prefix-help-command #'embark-prefix-help-command)
-  :config
-  ;; hide mode line of embark live/completion buffers
-  (add-to-list 'display-buffer-alist
-	       '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+	;; visualizes the list of completion candidates, as well as provides actions
+	;; we can perform on them, on a per-item or per-set basis. Like
+	;; a right-click functionality to work with candidates.
+	:bind
+	(("M-RET" . embark-act))
+	:init
+	;; optionally replace the key help with a completion-read interface
+	(setq prefix-help-command #'embark-prefix-help-command)
+	:config
+	;; hide mode line of embark live/completion buffers
+	(add-to-list 'display-buffer-alist
+				 '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
 		 nil
 		 (window-parameters (mode-line-format . none)))))
 
 (use-package embark-consult
-  ;; used with consult
-  :after (embark consult)
-  :demand t ;; necessary with hook below
-  ;; gives consult previews as you move around auto-updating collect buffer
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
+	;; used with consult
+	:after (embark consult)
+	:demand t ;; necessary with hook below
+	;; gives consult previews as you move around auto-updating collect buffer
+	:hook
+	(embark-collect-mode . consult-preview-at-point-mode))
 
 (use-package exec-path-from-shell
-  :config
-  ;; macOS GUI env inheritance is odd: this fixes env being out of sync
-  ;; with terminal env, like not finding binaries that it should
-  (when (memq window-system '(mac ns x))
-    (exec-path-from-shell-initialize)))
+	:config
+	;; macOS GUI env inheritance is odd: this fixes env being out of sync
+	;; with terminal env, like not finding binaries that it should
+	(when (memq window-system '(mac ns x))
+		(exec-path-from-shell-initialize)))
 
 (use-package expand-region
-  :bind ("C-=" . er/expand-region))
+	:bind ("C-=" . er/expand-region))
 
 (use-package diff-hl
-  :after (magit)
-  :config
-  (diff-hl-margin-mode)
-  (global-diff-hl-mode)
-  (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
-  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
+	:after (magit)
+	:config
+	(diff-hl-margin-mode)
+	(global-diff-hl-mode)
+	(add-hook 'dired-mode-hook 'diff-hl-dired-mode)
+	(add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
 
 (use-package flycheck
-  :init
-  (with-no-warnings
-    ;; https://github.com/DavidAnson/markdownlint-cli2
-    (setq flycheck-markdown-markdownlint-cli-executable "markdownlint-cli2"))
-  :config
-  ;; (setq-default flycheck-indication-mode 'right-fringe)
-  (global-set-key (kbd "<f9>") 'flycheck-mode)
-  (define-key flycheck-mode-map (kbd "M-n") 'flycheck-next-error)
-  (define-key flycheck-mode-map (kbd "M-p") 'flycheck-previous-error))
+	:init
+	(with-no-warnings
+		;; https://github.com/DavidAnson/markdownlint-cli2
+		(setq flycheck-markdown-markdownlint-cli-executable "markdownlint-cli2"))
+	:config
+	;; (setq-default flycheck-indication-mode 'right-fringe)
+	(global-set-key (kbd "<f9>") 'flycheck-mode)
+	(define-key flycheck-mode-map (kbd "M-n") 'flycheck-next-error)
+	(define-key flycheck-mode-map (kbd "M-p") 'flycheck-previous-error))
 
 (use-package git-timemachine)
 
 (use-package helpful
-  :config
-  ;; Note that the built-in 'describe-function' includes both functions
-  ;; and macros. 'helpful-function' is functions only, so we provide
-  ;; 'helpful-callable' as a drop-in replacement.
-  (global-set-key (kbd "C-h f") #'helpful-callable)
-  (global-set-key (kbd "C-h v") #'helpful-variable)
-  (global-set-key (kbd "C-h k") #'helpful-key)
-  ;; Lookup the current symbol at point. C-c C-d is a common keybinding
-  ;; for this in lisp modes.
-  (global-set-key (kbd "C-c C-d") #'helpful-at-point)
-  ;; Look up *F*unctions (excludes macros).
-  ;;
-  ;; By default, C-h F is bound to `Info-goto-emacs-command-node'. Helpful
-  ;; already links to the manual, if a function is referenced there.
-  (global-set-key (kbd "C-h F") #'helpful-function)
-  ;; Look up *C*ommands.
-  ;;
-  ;; By default, C-h C is bound to describe `describe-coding-system'. I
-  ;; don't find this very useful, but it's frequently useful to only
-  ;; look at interactive functions.
-  (global-set-key (kbd "C-h C") #'helpful-command))
+	:config
+	;; Note that the built-in 'describe-function' includes both functions
+	;; and macros. 'helpful-function' is functions only, so we provide
+	;; 'helpful-callable' as a drop-in replacement.
+	(global-set-key (kbd "C-h f") #'helpful-callable)
+	(global-set-key (kbd "C-h v") #'helpful-variable)
+	(global-set-key (kbd "C-h k") #'helpful-key)
+	;; Lookup the current symbol at point. C-c C-d is a common keybinding
+	;; for this in lisp modes.
+	(global-set-key (kbd "C-c C-d") #'helpful-at-point)
+	;; Look up *F*unctions (excludes macros).
+	;;
+	;; By default, C-h F is bound to `Info-goto-emacs-command-node'. Helpful
+	;; already links to the manual, if a function is referenced there.
+	(global-set-key (kbd "C-h F") #'helpful-function)
+	;; Look up *C*ommands.
+	;;
+	;; By default, C-h C is bound to describe `describe-coding-system'. I
+	;; don't find this very useful, but it's frequently useful to only
+	;; look at interactive functions.
+	(global-set-key (kbd "C-h C") #'helpful-command))
 
 (use-package hl-todo
-  :config
-  (global-hl-todo-mode))
+	:config
+	(global-hl-todo-mode))
 
 (use-package magit)
 
 (use-package marginalia
-  ;; provides meta-information to various completion lists, like doc strings
-  ;; to the mini-buffer list when using M-x
-  :config
-  (marginalia-mode))
+	;; provides meta-information to various completion lists, like doc strings
+	;; to the mini-buffer list when using M-x
+	:config
+	(marginalia-mode))
 
-(use-package markdown-mode)
+(use-package markdown-mode
+	:commands (markdown-mode gfm-mode)
+	:mode (("README\\.md\\'" . gfm-mode)
+				 ("\\.md\\'" . markdown-mode)
+				 ("\\.markdown\\'" . markdown-mode))
+	;; gem install kramdown kramdown-parser-gfm
+	:init (setq markdown-command "kramdown -x parser-gfm")
+	:config (setq markdown-asymmetric-header t
+								markdown-list-indent-width 2
+								markdown-hide-markup t)
+	;; Make whitespace-mode and whitespace-newline-mode use “¶” for end of line char and “▷” for tab.
+	(setq whitespace-display-mappings
+				;; all numbers are unicode codepoint in decimal. e.g. (insert-char 182 1)
+				'(
+					(space-mark 32 [183] [46]) ; ' ', '·', '.'
+					(newline-mark 10 [182 10]) ; '¶'
+					(tab-mark 9 [9655 9] [92 9])))) ; TODO: fix this character, not shown
 
 (use-package modus-themes
-  :config
-  (load-theme 'modus-operandi t))
+	:config
+	(load-theme 'modus-operandi t))
 
 (use-package orderless
-  ;; orderless: a completion style, which extends or replaces the built-in list of pattern
-  ;;            matching ’completion-styles’ native to Emacs
-  :config
-  ;; Uses Emacs’ completion-styles
-  (setq completion-styles '(orderless)))
+	;; orderless: a completion style, which extends or replaces the built-in list of pattern
+	;;            matching ’completion-styles’ native to Emacs
+	:config
+	;; Uses Emacs’ completion-styles
+	(setq completion-styles '(orderless)))
 
 (use-package projectile
-  :config
-  (setq projectile-project-search-path '("~/git"))
-  :init
-  (projectile-mode +1)
-  :bind (:map projectile-mode-map
-	      ("s-p" . projectile-find-file)
-	      ("C-c p" . projectile-command-map)))
+	:config
+	(setq projectile-project-search-path '("~/git"))
+	:init
+	(projectile-mode +1)
+	:bind (:map projectile-mode-map
+				("s-p" . projectile-find-file)
+				("C-c p" . projectile-command-map)))
 
 (use-package selectrum
-  ;; selectrum: front-end to display candidates vertically; replaces minibuffer default
-  :config
-  (selectrum-mode +1))
+	;; selectrum: front-end to display candidates vertically; replaces minibuffer default
+	:config
+	(selectrum-mode +1))
 
 (use-package selectrum-prescient
-  ;; better filtering and sorting according to selectrum maintainer.
-  ;; filters MRU completions, etc. to top of selection list
-  :config
-  (selectrum-prescient-mode +1)
-  ;; save cmd history to disk, better sorting over time
-  (prescient-persist-mode +1))
+	;; better filtering and sorting according to selectrum maintainer.
+	;; filters MRU completions, etc. to top of selection list
+	:config
+	(selectrum-prescient-mode +1)
+	;; save cmd history to disk, better sorting over time
+	(prescient-persist-mode +1))
 
 (use-package smartparens
-  :config
-  (require 'smartparens-config)
-  (setq sp-base-key-bindings 'paredit)
-  (setq sp-autoskip-closing-pair 'always)
-  (setq sp-hybrid-kill-entire-symbol nil)
-  (sp-use-paredit-bindings)
-  (show-smartparens-global-mode +1)
-  (setq blink-matching-paren nil))
+	:config
+	(require 'smartparens-config)
+	(setq sp-base-key-bindings 'paredit)
+	(setq sp-autoskip-closing-pair 'always)
+	(setq sp-hybrid-kill-entire-symbol nil)
+	(sp-use-paredit-bindings)
+	(show-smartparens-global-mode +1)
+	(setq blink-matching-paren nil))
 
 (use-package rg
-  :config
-  (rg-enable-default-bindings))
+	:config
+	(rg-enable-default-bindings))
 
 (use-package undo-tree
-  ;; visual undo for easy jumping back and forth between history
-  :config
-  ;; autosave the undo-tree history
-  (setq undo-tree-history-directory-alist
+	;; visual undo for easy jumping back and forth between history
+	:config
+	;; autosave the undo-tree history
+	(setq undo-tree-history-directory-alist
 	`((".*" . ,temporary-file-directory)))
-  (setq undo-tree-auto-save-history t)
-  (global-undo-tree-mode))
+	(setq undo-tree-auto-save-history t)
+	(global-undo-tree-mode))
 
 (use-package which-key
-  :config
-  (which-key-mode))
+	:config
+	(which-key-mode))
 
 (use-package yaml-mode)
 
@@ -301,39 +320,39 @@
 ;; personal indentation width, while maintaining the style (and
 ;; meaning) of any files you load.
 (setq-default indent-tabs-mode nil)   ;; don't use tabs to indent
-(setq-default tab-width 8)            ;; but maintain correct appearance
+(setq-default tab-width 2)
 
 ;; Newline at end of file
 (setq require-final-newline t)
 
 ;; hippie expand is dabbrev expand on steroids
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
-                                         try-expand-dabbrev-all-buffers
-                                         try-expand-dabbrev-from-kill
-                                         try-complete-file-name-partially
-                                         try-complete-file-name
-                                         try-expand-all-abbrevs
-                                         try-expand-list
-                                         try-expand-line
-                                         try-complete-lisp-symbol-partially
-                                         try-complete-lisp-symbol))
+																				 try-expand-dabbrev-all-buffers
+																				 try-expand-dabbrev-from-kill
+																				 try-complete-file-name-partially
+																				 try-complete-file-name
+																				 try-expand-all-abbrevs
+																				 try-expand-list
+																				 try-expand-line
+																				 try-complete-lisp-symbol-partially
+																				 try-complete-lisp-symbol))
 
 ;; indent line if not indented already, otherwise complete thing at point
 (setq tab-always-indent 'complete)
 
 ;; nicer scrolling
 (setq scroll-conservatively 100000
-      scroll-preserve-screen-position t) ; keep point in place, e.g., C/M-v
+			scroll-preserve-screen-position t) ; keep point in place, e.g., C/M-v
 
 ;; Built-in packages (not GNU/MELPA)
 (unless (eq window-system 'n)
-  (menu-bar-mode -1))
+	(menu-bar-mode -1))
 (when (fboundp 'tool-bar-mode)
-  (tool-bar-mode -1))
+	(tool-bar-mode -1))
 (when (fboundp 'scroll-bar-mode)
-  (scroll-bar-mode -1))
+	(scroll-bar-mode -1))
 (when (fboundp 'horizontal-scroll-bar-mode)
-  (horizontal-scroll-bar-mode -1))
+	(horizontal-scroll-bar-mode -1))
 
 (global-visual-line-mode)
 (show-paren-mode)
@@ -366,23 +385,26 @@
 (setq uniquify-ignore-buffers-re "^\\*") ; don't muck with special buffers
 
 
-
+;; Jekyll setup for work.
 (defun craigmac-jekyll-markdown-mode ()
-    "Minor mode setup for Jekyll Liquid Markdown buffers."
-    (flyspell-mode)
-    (whitespace-mode)
-    (abbrev-mode)
-    (setq-local tab-width 3))
+		"Minor mode setup for Jekyll Liquid Markdown buffers."
+		(flyspell-mode)
+		;; 'face is required. 'tabs and 'spaces are visualized via faces.
+		(setq-local whitespace-style '(face tabs space-mark))
+		(whitespace-mode)
+		(abbrev-mode)
+		(setq-local tab-width 3)
+		(linum-mode))
 (add-hook 'markdown-mode-hook 'craigmac-jekyll-markdown-mode)
 
 ;; M-x sudo to invoke TRAMP to edit current file as root hack
 (defun sudo()
-  "Use TRAMP to `sudo' the current buffer"
-  (interactive)
-  (when buffer-file-name
-    (find-alternate-file
-     (concat "/sudo:root@localhost:"
-	     buffer-file-name))))
+	"Use TRAMP to `sudo' the current buffer"
+	(interactive)
+	(when buffer-file-name
+		(find-alternate-file
+		 (concat "/sudo:root@localhost:"
+			 buffer-file-name))))
 ;; .zsh file is shell script too
 (add-to-list 'auto-mode-alist '("\\.zsh\\'" . shell-script-mode))
 
@@ -395,29 +417,29 @@
 ;; savehist keeps track of some history
 (require 'savehist)
 (setq savehist-additional-variables
-      ;; search entries
-      '(search-ring regexp-search-ring)
-      ;; save every minute
-      savehist-autosave-interval 60
-      ;; keep the home clean
-      savehist-file (expand-file-name "savehist" cdm-savefile-dir))
+			;; search entries
+			'(search-ring regexp-search-ring)
+			;; save every minute
+			savehist-autosave-interval 60
+			;; keep the home clean
+			savehist-file (expand-file-name "savehist" cdm-savefile-dir))
 (savehist-mode)
 
 ;; save recent files
 (require 'recentf)
 (setq recentf-save-file (expand-file-name "recentf" cdm-savefile-dir)
-      recentf-max-saved-items 500
-      recentf-max-menu-items 15
-      ;; disable recentf-cleanup on Emacs start, because it can cause
-      ;; problems with remote files
-      recentf-auto-cleanup 'never)
+			recentf-max-saved-items 500
+			recentf-max-menu-items 15
+			;; disable recentf-cleanup on Emacs start, because it can cause
+			;; problems with remote files
+			recentf-auto-cleanup 'never)
 
 (defun cdm-recentf-exclude-p (file)
-  "A predicate to decide whether to exclude FILE from recentf."
-  (let ((file-dir (file-truename (file-name-directory file))))
-    (cl-some (lambda (dir)
-               (string-prefix-p dir file-dir))
-             (mapcar 'file-truename (list cdm-savefile-dir package-user-dir)))))
+	"A predicate to decide whether to exclude FILE from recentf."
+	(let ((file-dir (file-truename (file-name-directory file))))
+		(cl-some (lambda (dir)
+							 (string-prefix-p dir file-dir))
+						 (mapcar 'file-truename (list cdm-savefile-dir package-user-dir)))))
 
 (add-to-list 'recentf-exclude 'cdm-recentf-exclude-p)
 
@@ -437,15 +459,15 @@
 
 ;; store all backup and autosave files in the tmp dir
 (setq backup-directory-alist
-      `((".*" . ,temporary-file-directory)))
+			`((".*" . ,temporary-file-directory)))
 (setq auto-save-file-name-transforms
-      `((".*" ,temporary-file-directory t)))
+			`((".*" ,temporary-file-directory t)))
 
 (require 'compile)
 (setq compilation-scroll-output t	; scroll compile buffer as it grows
-      compilation-ask-about-save nil	; just save and compile don't ask
-      compilation-always-kill t		; kill old compile proc before next one
-      compilation-auto-jump-to-first-error t) ; see 'compilation-skip-threshold'
+			compilation-ask-about-save nil	; just save and compile don't ask
+			compilation-always-kill t		; kill old compile proc before next one
+			compilation-auto-jump-to-first-error t) ; see 'compilation-skip-threshold'
 (global-set-key (kbd "<f5>") 'compile)
 (global-set-key (kbd "C-<f5>") 'kill-compilation)
 (global-set-key (kbd "<f6>") 'recompile)
@@ -466,17 +488,17 @@
 ;; more useful frame title, that show either a file or a
 ;; buffer name (if the buffer isn't visiting a file)
 (setq frame-title-format
-      '("" invocation-name " " (:eval (if (buffer-file-name)
-					  (abbreviate-file-name (buffer-file-name))
+			'("" invocation-name " " (:eval (if (buffer-file-name)
+						(abbreviate-file-name (buffer-file-name))
 					"%b"))))
 
 (require 'whitespace)
 (setq whitespace-line-column 80
-      whitespace-style '(face tabs empty trailing lines-tail))
+			whitespace-style '(face tabs empty trailing lines-tail))
 (add-hook 'before-save-hook #'whitespace-cleanup)
 
 (setq dired-recursive-deletes 'always
-      dired-recursive-copies 'always)
+			dired-recursive-copies 'always)
 ;; if window beside is dired, it is target window for moves, etc.
 (setq dired-dwim-target t)
 ;; some extensions that are not enable by default
@@ -484,7 +506,7 @@
 
 (flyspell-mode)
 (with-no-warnings
-  (setq ispell-program-name "aspell"
+	(setq ispell-program-name "aspell"
 	ispell-extra-args '("--sug-mode=ultra")))
 
 (add-hook 'text-mode-hook #'flyspell-mode)
@@ -499,35 +521,35 @@
 (add-hook 'text-mode-hook 'abbrev-mode)
 ;; make a shell script executable automatically on save
 (add-hook 'after-save-hook
-          'executable-make-buffer-file-executable-if-script-p)
+					'executable-make-buffer-file-executable-if-script-p)
 (add-hook 'prog-mode-hook 'linum-mode)
 
 ;; macOS - for using Microsoft Ergonomic keyboard instead of Apple Magic one
 (when (eq system-type 'darwin)
-  (setq mac-option-modifier 'super)     ; use left-option as <s-..> aka 'super
-  ;; From Prelude: enable emoji, and stop the UI from freezing when trying to
-  ;; display them.
-  (when (fboundp 'set-fontset-font)
-    (set-fontset-font t 'unicode "Apple Color Emoji" nil 'prepend))
-    (with-no-warnings
-    ;; ’ls’ on macOS is not GNU ls by default so we emulate standard
-    ;; GNU ls using the following (from docs on ’dired-use-ls-dired’):
-    (setq ls-lisp-use-insert-directory-program nil)
-    (require 'ls-lisp)))
+	(setq mac-option-modifier 'super)     ; use left-option as <s-..> aka 'super
+	;; From Prelude: enable emoji, and stop the UI from freezing when trying to
+	;; display them.
+	(when (fboundp 'set-fontset-font)
+		(set-fontset-font t 'unicode "Apple Color Emoji" nil 'prepend))
+		(with-no-warnings
+		;; ’ls’ on macOS is not GNU ls by default so we emulate standard
+		;; GNU ls using the following (from docs on ’dired-use-ls-dired’):
+		(setq ls-lisp-use-insert-directory-program nil)
+		(require 'ls-lisp)))
 
 (defun cdm-swap-meta-and-super ()
-  "Swap the mapping of Meta and Super.
+	"Swap the mapping of Meta and Super.
 Very useful for people using their Mac with a
 Windows external keyboard from time to time."
-  (interactive)
-  (if (eq mac-command-modifier 'super)
-      (progn
-        (setq mac-command-modifier 'meta)
-        (setq mac-option-modifier 'super)
-        (message "Command is now bound to META and Option is bound to SUPER."))
-    (setq mac-command-modifier 'super)
-    (setq mac-option-modifier 'meta)
-    (message "Command is now bound to SUPER and Option is bound to META.")))
+	(interactive)
+	(if (eq mac-command-modifier 'super)
+			(progn
+				(setq mac-command-modifier 'meta)
+				(setq mac-option-modifier 'super)
+				(message "Command is now bound to META and Option is bound to SUPER."))
+		(setq mac-command-modifier 'super)
+		(setq mac-option-modifier 'meta)
+		(message "Command is now bound to SUPER and Option is bound to META.")))
 
 ;; Replace ’typewriter’ style straight quotes of various kinds with the
 ;; appropriate and nicer “curved” variants.
@@ -564,9 +586,9 @@ Windows external keyboard from time to time."
 
 ;; GLOBAL KEYBINDINGS
 (global-set-key (kbd "s-.") (lambda ()
-                              (interactive)
-                              (find-file
-			       "~/.emacs.d/init.el")))
+															(interactive)
+															(find-file
+						 "~/.emacs.d/init.el")))
 ;; text-scale-increase is bound by default to s-= (Super key)
 (global-set-key (kbd "s--") 'text-scale-decrease)
 ;; continuous -/+ after this adjusts until any other key pressed and 0 resets
