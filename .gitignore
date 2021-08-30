@@ -17,3 +17,9 @@ ido.last~
 #*.*#
 \#*.*\#
 /savefile/
+.#ido.last
+bookmarks
+learning/
+/history
+/init.working.el
+/lisp/

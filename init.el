@@ -247,9 +247,12 @@
 (use-package yaml-mode)
 
 ;; SETTINGS
+(setq apropos-do-all t)
+(setq mouse-yank-at-point t)
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
 ;; Used througout config, was 'prelude-savefile-dir' originally.
 (setq cdm-savefile-dir (expand-file-name "savefile" user-emacs-directory))
-(setq custom-file "~/.emacs.d/custom-file.el") ; 'M-x customize' vars go here instead
+(setq custom-file "~/.emacs.d/custom.el") ; 'M-x customize' vars go here instead
 (load-file custom-file)
 (setq debug-on-error nil)
 (defconst private-dir (expand-file-name "private" user-emacs-directory))
@@ -323,10 +326,15 @@
       scroll-preserve-screen-position t) ; keep point in place, e.g., C/M-v
 
 ;; Built-in packages (not GNU/MELPA)
+(unless (eq window-system 'n)
+  (menu-bar-mode -1))
 (when (fboundp 'tool-bar-mode)
   (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode)
+  (scroll-bar-mode -1))
+(when (fboundp 'horizontal-scroll-bar-mode)
+  (horizontal-scroll-bar-mode -1))
 
-(scroll-bar-mode -1)
 (global-visual-line-mode)
 (show-paren-mode)
 (transient-mark-mode)
@@ -334,7 +342,6 @@
 (save-place-mode t)
 (auto-fill-mode t)
 (blink-cursor-mode -1)
-(fset 'yes-or-no-p 'y-or-n-p)
 (global-auto-revert-mode)
 (global-eldoc-mode)
 ;; remap here means whatever is mapped to call dabbrev-expand should just
@@ -344,13 +351,12 @@
 (auto-image-file-mode)			; open .png as image not text buffer
 (size-indication-mode)			; e.g., 60:8 49% in modeline
 (column-number-mode)
-(global-display-line-numbers-mode)	; replaces 'nlinum-mode'
 ;;(set-fringe-mode 10)
 (delete-selection-mode)
 ;; enable winner-mode to manage window configurations.
 ;; C-c Left/Right to undo/redo last window change
 (winner-mode)
-
+(fset 'yes-or-no-p 'y-or-n-p)
 
 ;; meaningful names for buffers with the same name
 (require 'uniquify)
@@ -359,13 +365,24 @@
 (setq uniquify-after-kill-buffer-p t)    ; rename after killing uniquified
 (setq uniquify-ignore-buffers-re "^\\*") ; don't muck with special buffers
 
-;; abbrev config
-(add-hook 'text-mode-hook 'abbrev-mode)
 
-;; make a shell script executable automatically on save
-(add-hook 'after-save-hook
-          'executable-make-buffer-file-executable-if-script-p)
 
+(defun craigmac-jekyll-markdown-mode ()
+    "Minor mode setup for Jekyll Liquid Markdown buffers."
+    (flyspell-mode)
+    (whitespace-mode)
+    (abbrev-mode)
+    (setq-local tab-width 3))
+(add-hook 'markdown-mode-hook 'craigmac-jekyll-markdown-mode)
+
+;; M-x sudo to invoke TRAMP to edit current file as root hack
+(defun sudo()
+  "Use TRAMP to `sudo' the current buffer"
+  (interactive)
+  (when buffer-file-name
+    (find-alternate-file
+     (concat "/sudo:root@localhost:"
+	     buffer-file-name))))
 ;; .zsh file is shell script too
 (add-to-list 'auto-mode-alist '("\\.zsh\\'" . shell-script-mode))
 
@@ -424,8 +441,6 @@
 (setq auto-save-file-name-transforms
       `((".*" ,temporary-file-directory t)))
 
-
-
 (require 'compile)
 (setq compilation-scroll-output t	; scroll compile buffer as it grows
       compilation-ask-about-save nil	; just save and compile don't ask
@@ -473,19 +488,23 @@
 	ispell-extra-args '("--sug-mode=ultra")))
 
 (add-hook 'text-mode-hook #'flyspell-mode)
+(add-hook 'text-mode-hook 'abbrev-mode)
+(add-hook 'emacs-lisp-mode-hook 'abbrev-mode)
 (add-hook 'prog-mode-hook #'flyspell-prog-mode)
 
 ;; yaml inherits from text-mode but we want whitespace on there
 (add-hook 'yaml-mode-hook #'whitespace-mode)
 (add-hook 'prog-mode-hook #'whitespace-mode)
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
+(add-hook 'text-mode-hook 'abbrev-mode)
+;; make a shell script executable automatically on save
+(add-hook 'after-save-hook
+          'executable-make-buffer-file-executable-if-script-p)
+(add-hook 'prog-mode-hook 'linum-mode)
 
 ;; macOS - for using Microsoft Ergonomic keyboard instead of Apple Magic one
 (when (eq system-type 'darwin)
-  (setq mac-control-modifier 'control)
-  (setq mac-command-modifier 'super) ;; Win key on my MS kb, use as s-<key>
-  (setq mac-option-modifier 'meta) ;; left-alt on my MS kb, use a M-... keybinding
-  (setq mac-right-option-modifier 'none) ;; right-alt on my MS kb
+  (setq mac-option-modifier 'super)     ; use left-option as <s-..> aka 'super
   ;; From Prelude: enable emoji, and stop the UI from freezing when trying to
   ;; display them.
   (when (fboundp 'set-fontset-font)
@@ -544,8 +563,10 @@ Windows external keyboard from time to time."
 ;;          ("_ underscores"         . (95 95))))   ; _ _
 
 ;; GLOBAL KEYBINDINGS
-(global-set-key (kbd "s-.") (lambda () (interactive)(find-file
-						     "~/.emacs.d/init.el")))
+(global-set-key (kbd "s-.") (lambda ()
+                              (interactive)
+                              (find-file
+			       "~/.emacs.d/init.el")))
 ;; text-scale-increase is bound by default to s-= (Super key)
 (global-set-key (kbd "s--") 'text-scale-decrease)
 ;; continuous -/+ after this adjusts until any other key pressed and 0 resets
@@ -558,12 +579,7 @@ Windows external keyboard from time to time."
 (global-set-key (kbd "M-`") #'crux-visit-shell-buffer)
 (global-set-key (kbd "s-j") #'crux-top-join-line)
 (global-unset-key (kbd "<f10>")) ; usually pops up menu for key nav
-
-
-
-;; TODO: turn off for individual buffer types, locally, like eshell, git, help buffers
-;; TODO: turn off individual buffers like init.el for flycheck stuff
-;; TODO: Make better use of macOS s-<key> to replicate some Code stuff easily
-
+(global-set-key (kbd "M-i") 'consult-imenu)
+(global-set-key (kbd "M-o") 'other-window)
 
 ;;; init.el ends here
