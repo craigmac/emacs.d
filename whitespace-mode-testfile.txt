@@ -1,8 +1,6 @@
-
-
 above is beginning of file repeated newline
 
- beginning single space
+     beginning single space
 ending single space
     beginning repeated spaces
         beginning repeated spaces
@@ -27,7 +25,7 @@ this is a long line. what's â€œlongâ€ is determined by fill-column, not
 
  long long long long long long long long long long
 
-LongLineNoWhiteSpacettttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
+   LongLineNoWhiteSpacettttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
 
                   this is a long line with beginning and ending repeated spaces long long long long
 

@@ -22,6 +22,11 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
+;; sets coding system priority, default input method, etc.
+;;(set-language-environment "UTF-8")
+;; set default value of various coding systems like new buffer,
+;; subprocess I/O.
+;;(set-default-coding-systems 'utf-8)
 
 ;; From https://github.com/jwiegley/use-package#package-installation:
 (eval-when-compile
@@ -31,7 +36,6 @@
 ;; https://wikipedia.org RET works, so might be actually a package
 ;; signing/verification problem. https on Windows is also no-bueno.
 (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
-(add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/") t)
 
 ;; use-package
 ;; :init keyword runs *before* package loaded, always
@@ -66,8 +70,16 @@
 	:config
 	(global-company-mode))
 
+;; TODO: tweak colours on this to not be so jarring with modus theme
+(use-package company-box
+  ;; https://github.com/sebastiencs/company-box
+  ;; better UI for company with help strings, icons, support for whitespace-mode
+  :after (company)
+  :hook (company-mode . company-box-mode))
+
 (use-package consult
-	;; enhances several minibuffer-centric commands and provides new ones
+	;; Enhances several minibuffer-centric commands and provides new
+	;; ones, replacing Emacs' default (completing-read) function.
 	:config
 	(global-set-key (kbd "<f7>") 'consult-outline)
 	(global-set-key [C-tab] 'consult-buffer)
@@ -96,7 +108,7 @@
 	(global-eldoc-mode))
 
 (use-package embark
-	;; visualizes the list of completion candidates, as well as provides actions
+	;; Visualizes the list of completion candidates, as well as provides actions
 	;; we can perform on them, on a per-item or per-set basis. Like
 	;; a right-click functionality to work with candidates.
 	:bind
@@ -107,9 +119,9 @@
 	:config
 	;; hide mode line of embark live/completion buffers
 	(add-to-list 'display-buffer-alist
-				 '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-		 nil
-		 (window-parameters (mode-line-format . none)))))
+							 '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+								 nil
+								 (window-parameters (mode-line-format . none)))))
 
 (use-package embark-consult
 	;; used with consult
@@ -179,6 +191,15 @@
 
 (use-package magit)
 
+
+(use-package forge
+  ;; magit companion for working with Git forges (GitLab/Hub)
+  :after magit
+  :config
+  ;; github API key stored here
+  (setq auth-sources '("~/.authinfo")))
+
+
 (use-package marginalia
 	;; provides meta-information to various completion lists, like doc strings
 	;; to the mini-buffer list when using M-x
@@ -188,30 +209,22 @@
 (use-package markdown-mode
 	:commands (markdown-mode gfm-mode)
 	:mode (("README\\.md\\'" . gfm-mode)
-				 ("\\.md\\'" . markdown-mode)
-				 ("\\.markdown\\'" . markdown-mode))
+				 ("\\.md\\'" . gfm-mode)
+				 ("\\.markdown\\'" . gfm-mode))
 	;; gem install kramdown kramdown-parser-gfm
-	:init (setq markdown-command "kramdown -x parser-gfm")
-	:config (setq markdown-asymmetric-header t
-								markdown-list-indent-width 2
-								markdown-hide-markup t)
-	;; Make whitespace-mode and whitespace-newline-mode use “¶” for end of line char and “▷” for tab.
-	(setq whitespace-display-mappings
-				;; all numbers are unicode codepoint in decimal. e.g. (insert-char 182 1)
-				'(
-					(space-mark 32 [183] [46]) ; ' ', '·', '.'
-					(newline-mark 10 [182 10]) ; '¶'
-					(tab-mark 9 [9655 9] [92 9])))) ; TODO: fix this character, not shown
+	:init (setq markdown-command "kramdown -x parser-gfm"))
 
 (use-package modus-themes
 	:config
 	(load-theme 'modus-operandi t))
 
 (use-package orderless
-	;; orderless: a completion style, which extends or replaces the built-in list of pattern
-	;;            matching ’completion-styles’ native to Emacs
+	;; A completion style, which extends or replaces the built-in list
+	;; of pattern matching ’completion-styles’ native to Emacs. Used in
+	;; conjunction with Selectrum (which chooses a filtering algorithm from
+  ;; Emacs' 'completion-styles).
 	:config
-	;; Uses Emacs’ completion-styles
+	;; Add to Emacs’ built-in 'completion-styles
 	(setq completion-styles '(orderless)))
 
 (use-package projectile
@@ -220,13 +233,22 @@
 	:init
 	(projectile-mode +1)
 	:bind (:map projectile-mode-map
-				("s-p" . projectile-find-file)
-				("C-c p" . projectile-command-map)))
+				      ("s-p" . projectile-find-file)
+				      ("C-c p" . projectile-command-map)))
 
 (use-package selectrum
-	;; selectrum: front-end to display candidates vertically; replaces minibuffer default
-	:config
-	(selectrum-mode +1))
+  ;; https://github.com/raxod502/selectrum
+  ;;
+  ;; A better completion UI using standard Emacs APIs - an interface
+  ;; for selecting items from a list for all Emacs completion
+  ;; commands. For filtering by default is defers to Emacs'
+  ;; completion-styles, but to use other more powerful ones you need
+  ;; to install other packages that provide these. Two of such are:
+  ;; Prescient and Orderless.
+  :config
+	(selectrum-mode +1)
+  ;; to work with flyspell interface
+  (setq flyspell-correct-interface #'flyspell-correct-dummy))
 
 (use-package selectrum-prescient
 	;; better filtering and sorting according to selectrum maintainer.
@@ -390,12 +412,33 @@
 		"Minor mode setup for Jekyll Liquid Markdown buffers."
 		(flyspell-mode)
 		;; 'face is required. 'tabs and 'spaces are visualized via faces.
-		(setq-local whitespace-style '(face tabs space-mark))
+		(setq whitespace-style '(face tabs spaces space-mark))
+    ;; unfortunately there are some unavoidable whitespace glitches when using
+    ;; in conjunction with company-mode, due to way emacs renders to screen.
+    ;; https://github.com/company-mode/company-mode/issues/234
 		(whitespace-mode)
 		(abbrev-mode)
 		(setq-local tab-width 3)
-		(linum-mode))
-(add-hook 'markdown-mode-hook 'craigmac-jekyll-markdown-mode)
+		(linum-mode)
+    (setq whitespace-display-mappings
+          '(
+            (space-mark   ?\     [?·]     [?.])		; space
+            (space-mark   ?\xA0  [?·]     [?.])		; hard space
+            (newline-mark ?\n    [?↵ ?\n] [?$ ?\n]) ; eol
+            (tab-mark     ?\t    [?» ?\t] [?\\ ?\t]) ; tab
+            ))
+    ;; gem install kramdown kramdown-parser-gfm
+    (setq-local markdown-command "kramdown -x parser-gfm"
+                markdown-asymmetric-header t
+                markdown-list-indent-width 2
+                markdown-hide-markup nil
+                ;; three backticks do no trigger auto insert menu of languages
+                ;; because our parser supports more than listed here so I don't
+                ;; use it.
+                markdown-gfm-use-electric-backquote nil
+                ;; quicker for tab completion with keyboard, instead of menus
+                markdown-nested-imenu-heading-index nil))
+(add-hook 'gfm-mode-hook 'craigmac-jekyll-markdown-mode)
 
 ;; M-x sudo to invoke TRAMP to edit current file as root hack
 (defun sudo()
