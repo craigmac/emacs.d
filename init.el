@@ -191,14 +191,13 @@
 
 (use-package magit)
 
-
 (use-package forge
   ;; magit companion for working with Git forges (GitLab/Hub)
   :after magit
-  :config
-  ;; github API key stored here
+  :init
+  ;; github API key stored using this one specifically, instead
+  ;; of looking at all three possible files
   (setq auth-sources '("~/.authinfo")))
-
 
 (use-package marginalia
 	;; provides meta-information to various completion lists, like doc strings
