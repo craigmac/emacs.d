@@ -551,7 +551,6 @@
 	(setq ispell-program-name "aspell"
 	ispell-extra-args '("--sug-mode=ultra")))
 
-(add-hook 'text-mode-hook #'flyspell-mode)
 (add-hook 'text-mode-hook 'abbrev-mode)
 (add-hook 'emacs-lisp-mode-hook 'abbrev-mode)
 (add-hook 'prog-mode-hook #'flyspell-prog-mode)
@@ -645,5 +644,10 @@ Windows external keyboard from time to time."
 (global-unset-key (kbd "<f10>")) ; usually pops up menu for key nav
 (global-set-key (kbd "M-i") 'consult-imenu)
 (global-set-key (kbd "M-o") 'other-window)
+
+;; yaml-mode inherits text-mode but we don't want flyspell-mode on
+;; there, just for comment strings/docs.
+(add-hook 'yaml-mode-hook 'flyspell-prog-mode)
+(add-hook 'git-commit-mode-hook 'flyspell-mode)
 
 ;;; init.el ends here
