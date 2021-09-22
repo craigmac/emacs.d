@@ -44,7 +44,7 @@
 ;; * figure out spelling settings
 ;; * how to add words to ok words list for work words
 ;; * company settings:
-;;   * stupid autofilling out!
+;;   * stupid auto-filling out!
 ;;   * enter NOT filling candidate in.
 ;;   * not filling in automatically if it's the only candidate.
 ;;   * something weird about suggestions with numbers or numbers plus decimal

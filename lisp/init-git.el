@@ -5,13 +5,9 @@
 (use-package diff-hl
   :after (magit)
   :config
-  ;; Turn off +,-,=,? etc. in the margin, just use colors
-  (setq diff-hl-margin-symbols-alist nil)
-  ;; use margin instead of fringe area
-  (diff-hl-margin-mode)
   (global-diff-hl-mode)
   ;; mouse click in fringe over git marker shows the diff
-  (diff-hl-show-hunk-mouse-mode)
+  (global-diff-hl-show-hunk-mouse-mode)
   ;; highlight changes on the fly
   (diff-hl-flydiff-mode)
   (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
